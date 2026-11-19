@@ -5,6 +5,20 @@ const requireClient = () => {
   return supabase
 }
 
+export async function getProfile(userId) {
+  const client = requireClient()
+  const { data, error } = await client.from('profiles').select('*').eq('id', userId).single()
+  if (error) throw error
+  return data
+}
+
+export async function updateProfile(userId, fullName) {
+  const client = requireClient()
+  const { data, error } = await client.from('profiles').update({ full_name: fullName }).eq('id', userId).select().single()
+  if (error) throw error
+  return data
+}
+
 export async function listPosts() {
   const client = requireClient()
   const { data, error } = await client.from('posts').select('*').order('scheduled_for', { ascending: true })
@@ -19,9 +33,37 @@ export async function createPost(input) {
   return data
 }
 
+export async function updatePost(id, input) {
+  const client = requireClient()
+  const { data, error } = await client.from('posts').update(input).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
 export async function listMedia() {
   const client = requireClient()
   const { data, error } = await client.from('media_assets').select('*').order('created_at', { ascending: false })
+  if (error) throw error
+  return Promise.all(data.map(async asset => { try { const { data: signed } = await client.storage.from('media').createSignedUrl(asset.storage_path); return { ...asset, preview_url:signed.signedUrl } } catch { return asset } }))
+}
+
+export async function deleteMedia(asset) {
+  const client = requireClient()
+  await client.storage.from('media').remove([asset.storage_path])
+  const { error } = await client.from('media_assets').delete().eq('id', asset.id)
+  if (error) throw error
+}
+
+export async function listSocialAccounts() {
+  const client = requireClient()
+  const { data, error } = await client.from('social_accounts').select('*').order('platform', { ascending: true })
+  if (error) throw error
+  return data
+}
+
+export async function saveSocialAccount(input) {
+  const client = requireClient()
+  const { data, error } = await client.from('social_accounts').upsert(input, { onConflict:'owner_id,platform' }).select().single()
   if (error) throw error
   return data
 }
@@ -34,12 +76,26 @@ export async function uploadMedia(file, userId) {
   if (uploadError) throw uploadError
   const { data, error } = await client.from('media_assets').insert({ name: file.name, storage_path: path, mime_type: file.type, size_bytes: file.size }).select().single()
   if (error) throw error
-  return data
+  try { const { data: signed } = await client.storage.from('media').createSignedUrl(path); return { ...data, preview_url:signed.signedUrl } } catch { return data }
 }
 
 export async function listPublishingSchedules() {
   const client = requireClient()
   const { data, error } = await client.from('publishing_schedules').select('*').order('platform', { ascending: true })
+  if (error) throw error
+  return data
+}
+
+export async function listAutomationSettings() {
+  const client = requireClient()
+  const { data, error } = await client.from('automation_settings').select('*').order('updated_at', { ascending: false })
+  if (error) throw error
+  return data?.[0] || null
+}
+
+export async function saveAutomationSettings(input) {
+  const client = requireClient()
+  const { data, error } = await client.from('automation_settings').upsert(input, { onConflict:'owner_id' }).select().single()
   if (error) throw error
   return data
 }
@@ -54,6 +110,20 @@ export async function savePublishingSchedule(input) {
 export async function listGroupCandidates() {
   const client = requireClient()
   const { data, error } = await client.from('group_candidates').select('*').order('relevance_score', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createGroupCandidate(input) {
+  const client = requireClient()
+  const { data, error } = await client.from('group_candidates').upsert(input, { onConflict:'owner_id,external_group_id' }).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function createGroupOutreachDraft(input) {
+  const client = requireClient()
+  const { data, error } = await client.from('group_outreach_drafts').insert(input).select().single()
   if (error) throw error
   return data
 }
