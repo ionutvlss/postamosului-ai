@@ -26,7 +26,7 @@ const auth = {
 }
 
 function table(name) {
-  return { select: (columns='*') => ({ order: async (column, {ascending=true}={}) => ({ data: await request(`/rest/v1/${name}?select=${encodeURIComponent(columns)}&order=${column}.${ascending?'asc':'desc'}`), error:null }) }), insert: (values) => ({ select: () => ({ single: async () => request(`/rest/v1/${name}`, { method:'POST', headers:{Prefer:'return=representation'}, body:JSON.stringify(values) }).then(rows => ({ data:rows?.[0], error:null })) }) }) }
+  return { select: (columns='*') => ({ order: async (column, {ascending=true}={}) => ({ data: await request(`/rest/v1/${name}?select=${encodeURIComponent(columns)}&order=${column}.${ascending?'asc':'desc'}`), error:null }) }), insert: (values) => ({ select: () => ({ single: async () => request(`/rest/v1/${name}`, { method:'POST', headers:{Prefer:'return=representation'}, body:JSON.stringify(values) }).then(rows => ({ data:rows?.[0], error:null })) }) }), upsert: (values, options={}) => ({ select: () => ({ single: async () => request(`/rest/v1/${name}?on_conflict=${encodeURIComponent(options.onConflict || '')}`, { method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=representation'}, body:JSON.stringify(values) }).then(rows => ({ data:rows?.[0], error:null })) }) }) }
 }
 
 function storage(bucket) { return { upload: async (path, file, options={}) => { const response = await fetch(`${url}/storage/v1/object/${bucket}/${path}`, { method:'POST', headers:{...headers(), 'Content-Type':options.contentType || file.type || 'application/octet-stream', 'x-upsert':String(options.upsert || false)}, body:file }); if (!response.ok) throw new Error('Uploadul în Storage a eșuat'); return { data: await response.json() } } } }

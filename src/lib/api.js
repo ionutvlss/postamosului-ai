@@ -46,7 +46,7 @@ export async function listPublishingSchedules() {
 
 export async function savePublishingSchedule(input) {
   const client = requireClient()
-  const { data, error } = await client.from('publishing_schedules').insert(input).select().single()
+  const { data, error } = await client.from('publishing_schedules').upsert(input, { onConflict:'owner_id,platform' }).select().single()
   if (error) throw error
   return data
 }
