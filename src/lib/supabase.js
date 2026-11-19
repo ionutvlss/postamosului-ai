@@ -1,0 +1,34 @@
+// Supabase REST adapter. It keeps the app dependency-light while using the
+// official Auth, PostgREST and Storage endpoints with the anon key.
+const url = import.meta.env.VITE_SUPABASE_URL
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+export const isSupabaseConfigured = Boolean(url && anonKey)
+let currentSession = JSON.parse(localStorage.getItem('postamosului.session') || 'null')
+const listeners = new Set()
+const headers = (session = currentSession) => ({ apikey: anonKey, Authorization: `Bearer ${session?.access_token || anonKey}`, 'Content-Type': 'application/json' })
+const notify = () => listeners.forEach(listener => listener(currentSession))
+
+async function request(path, options = {}, session = currentSession) {
+  const response = await fetch(`${url}${path}`, { ...options, headers: { ...headers(session), ...(options.headers || {}) } })
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(payload?.msg || payload?.message || payload?.error_description || `Supabase request failed (${response.status})`)
+  return payload
+}
+
+const auth = {
+  async getSession() { return { data: { session: currentSession } } },
+  onAuthStateChange(callback) { listeners.add(callback); return { data: { subscription: { unsubscribe: () => listeners.delete(callback) } } } },
+  async signInWithPassword({ email, password }) {
+    try { currentSession = await request('/auth/v1/token?grant_type=password', { method:'POST', body:JSON.stringify({ email, password }) }, null); localStorage.setItem('postamosului.session', JSON.stringify(currentSession)); notify(); return { data:{session:currentSession}, error:null } }
+    catch (error) { return { data:{session:null}, error } }
+  },
+  async signOut() { currentSession = null; localStorage.removeItem('postamosului.session'); notify() }
+}
+
+function table(name) {
+  return { select: (columns='*') => ({ order: async (column, {ascending=true}={}) => ({ data: await request(`/rest/v1/${name}?select=${encodeURIComponent(columns)}&order=${column}.${ascending?'asc':'desc'}`), error:null }) }), insert: (values) => ({ select: () => ({ single: async () => request(`/rest/v1/${name}`, { method:'POST', headers:{Prefer:'return=representation'}, body:JSON.stringify(values) }).then(rows => ({ data:rows?.[0], error:null })) }) }) }
+}
+
+function storage(bucket) { return { upload: async (path, file, options={}) => { const response = await fetch(`${url}/storage/v1/object/${bucket}/${path}`, { method:'POST', headers:{...headers(), 'Content-Type':options.contentType || file.type || 'application/octet-stream', 'x-upsert':String(options.upsert || false)}, body:file }); if (!response.ok) throw new Error('Uploadul în Storage a eșuat'); return { data: await response.json() } } } }
+
+export const supabase = isSupabaseConfigured ? { auth, from: table, storage: { from: storage } } : null
