@@ -11,7 +11,7 @@ const notify = () => listeners.forEach(listener => listener(currentSession))
 async function request(path, options = {}, session = currentSession) {
   const response = await fetch(`${url}${path}`, { ...options, headers: { ...headers(session), ...(options.headers || {}) } })
   const payload = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(payload?.msg || payload?.message || payload?.error_description || `Supabase request failed (${response.status})`)
+  if (!response.ok) throw new Error(payload?.msg || payload?.message || payload?.error_description || payload?.error || `Supabase request failed (${response.status})`)
   return payload
 }
 
