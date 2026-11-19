@@ -57,3 +57,10 @@ export async function listGroupCandidates() {
   if (error) throw error
   return data
 }
+
+export async function createContentVariant(input) {
+  const client = requireClient()
+  const { data, error } = await client.from('content_variants').insert(input).select().single()
+  if (error) throw error
+  return data
+}
