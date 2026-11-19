@@ -13,7 +13,13 @@ Deno.serve(async (request) => {
   const authorization = request.headers.get('Authorization')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  let supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!supabaseServiceRoleKey) {
+    try {
+      const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}')
+      supabaseServiceRoleKey = secretKeys.default || Object.values(secretKeys)[0] as string | undefined
+    } catch { /* fallback to the user's JWT below */ }
+  }
   const openAiKey = Deno.env.get('OPENAI_API_KEY')
   if (!authorization || !supabaseUrl || !supabaseAnonKey) return json({ error: 'Missing Supabase configuration' }, 500)
   if (!openAiKey) return json({ error: 'OPENAI_API_KEY nu este configurat în Edge Function Secrets' }, 503)
@@ -25,7 +31,9 @@ Deno.serve(async (request) => {
     ? { apikey: supabaseServiceRoleKey, Authorization: `Bearer ${supabaseServiceRoleKey}` }
     : { apikey: supabaseAnonKey, Authorization: authorization }
   const profileResponse = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&role=eq.admin&select=id&limit=1`, { headers: profileHeaders })
-  if (!profileResponse.ok || (await profileResponse.json()).length === 0) return json({ error: 'Acces permis doar administratorilor' }, 403)
+  const profileRows = await profileResponse.json().catch(() => [])
+  if (!profileResponse.ok) return json({ error: `Verificarea profilului a eșuat (${profileResponse.status})` }, 500)
+  if (profileRows.length === 0) return json({ error: `Profil admin negăsit pentru utilizatorul autentificat (${user.id})` }, 403)
 
   const input = await request.json().catch(() => ({}))
   const prompt = String(input.prompt || '').trim()
