@@ -64,3 +64,11 @@ export async function createContentVariant(input) {
   if (error) throw error
   return data
 }
+
+export async function generateContent(input) {
+  const client = requireClient()
+  const { data, error } = await client.functions.invoke('generate-content', { body:input })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
+}

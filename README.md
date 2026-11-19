@@ -21,3 +21,15 @@ npm run build
 
 - `supabase/schema.sql` — schema inițială, RLS și Storage
 - `supabase/phase2_automation.sql` — programări, variante AI, grupuri și comentarii
+- `supabase/functions/generate-content/index.ts` — generare server-side prin OpenAI Responses API
+
+## OpenAI Edge Function
+
+Deploy-ul funcției se face cu Supabase CLI din rădăcina proiectului:
+
+```bash
+supabase functions deploy generate-content
+supabase secrets set OPENAI_API_KEY=cheia-ta OPENAI_MODEL=gpt-4.1-mini
+```
+
+Cheia OpenAI rămâne în secrets Supabase și nu se adaugă în `.env.local` sau GitHub.

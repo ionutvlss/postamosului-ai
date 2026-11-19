@@ -31,4 +31,4 @@ function table(name) {
 
 function storage(bucket) { return { upload: async (path, file, options={}) => { const response = await fetch(`${url}/storage/v1/object/${bucket}/${path}`, { method:'POST', headers:{...headers(), 'Content-Type':options.contentType || file.type || 'application/octet-stream', 'x-upsert':String(options.upsert || false)}, body:file }); if (!response.ok) throw new Error('Uploadul în Storage a eșuat'); return { data: await response.json() } } } }
 
-export const supabase = isSupabaseConfigured ? { auth, from: table, storage: { from: storage } } : null
+export const supabase = isSupabaseConfigured ? { auth, from: table, storage: { from: storage }, functions: { invoke: async (name, { body } = {}) => ({ data: await request(`/functions/v1/${name}`, { method:'POST', body:JSON.stringify(body) }), error:null }) } } : null
