@@ -16,7 +16,12 @@ async function request(path, options = {}, session = currentSession) {
 }
 
 const auth = {
-  async getSession() { return { data: { session: currentSession } } },
+  async getSession() {
+    if (currentSession?.refresh_token) {
+      try { currentSession = await request('/auth/v1/token?grant_type=refresh_token', { method:'POST', body:JSON.stringify({ refresh_token:currentSession.refresh_token }) }, null); localStorage.setItem('postamosului.session', JSON.stringify(currentSession)) } catch { currentSession = null; localStorage.removeItem('postamosului.session') }
+    }
+    return { data: { session: currentSession } }
+  },
   onAuthStateChange(callback) { listeners.add(callback); return { data: { subscription: { unsubscribe: () => listeners.delete(callback) } } } },
   async signInWithPassword({ email, password }) {
     try { currentSession = await request('/auth/v1/token?grant_type=password', { method:'POST', body:JSON.stringify({ email, password }) }, null); localStorage.setItem('postamosului.session', JSON.stringify(currentSession)); notify(); return { data:{session:currentSession}, error:null } }
@@ -31,4 +36,4 @@ function table(name) {
 
 function storage(bucket) { return { upload: async (path, file, options={}) => { const response = await fetch(`${url}/storage/v1/object/${bucket}/${path}`, { method:'POST', headers:{...headers(), 'Content-Type':options.contentType || file.type || 'application/octet-stream', 'x-upsert':String(options.upsert || false)}, body:file }); if (!response.ok) throw new Error('Uploadul în Storage a eșuat'); return { data: await response.json() } } } }
 
-export const supabase = isSupabaseConfigured ? { auth, from: table, storage: { from: storage }, functions: { invoke: async (name, { body } = {}) => ({ data: await request(`/functions/v1/${name}`, { method:'POST', body:JSON.stringify(body) }), error:null }) } } : null
+export const supabase = isSupabaseConfigured ? { auth, from: table, storage: { from: storage }, functions: { invoke: async (name, { body } = {}) => { if (currentSession?.refresh_token) { try { currentSession = await request('/auth/v1/token?grant_type=refresh_token', { method:'POST', body:JSON.stringify({ refresh_token:currentSession.refresh_token }) }, null); localStorage.setItem('postamosului.session', JSON.stringify(currentSession)) } catch {} } return { data: await request(`/functions/v1/${name}`, { method:'POST', body:JSON.stringify(body) }), error:null } } } } : null
