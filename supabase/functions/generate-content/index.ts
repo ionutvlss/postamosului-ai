@@ -13,7 +13,7 @@ Deno.serve(async (request) => {
   const authorization = request.headers.get('Authorization')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
-  let supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  let supabaseServiceRoleKey = Deno.env.get('POSTAMOSULUI_SUPABASE_ADMIN_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!supabaseServiceRoleKey) {
     try {
       const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}')
@@ -32,7 +32,10 @@ Deno.serve(async (request) => {
     : { apikey: supabaseAnonKey, Authorization: authorization }
   const profileResponse = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&role=eq.admin&select=id&limit=1`, { headers: profileHeaders })
   const profileRows = await profileResponse.json().catch(() => [])
-  if (!profileResponse.ok) return json({ error: `Verificarea profilului a eșuat (${profileResponse.status})` }, 500)
+  if (!profileResponse.ok) {
+    const details = typeof profileRows?.message === 'string' ? `: ${profileRows.message}` : ''
+    return json({ error: `Verificarea profilului a eșuat (${profileResponse.status})${details}` }, 500)
+  }
   if (profileRows.length === 0) return json({ error: `Profil admin negăsit pentru utilizatorul autentificat (${user.id})` }, 403)
 
   const input = await request.json().catch(() => ({}))
