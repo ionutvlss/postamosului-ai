@@ -1,0 +1,36 @@
+name: Diagnostic Supabase
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Verificări (fără valori secrete)
+        run: |
+          q() {
+            echo "### $1"
+            body=$(jq -n --arg q "$2" '{query: $q}')
+            curl -sS -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" -H 'Content-Type: application/json' --data "$body" | jq -c '.'
+            echo
+          }
+          q "Joburi cron" "select jobname, schedule, active from cron.job"
+          q "Ultimele rulări cron" "select j.jobname, d.status, d.start_time, left(coalesce(d.return_message,''),120) msg from cron.job_run_details d join cron.job j using (jobid) order by d.start_time desc limit 5"
+          q "Ultimele răspunsuri HTTP (pg_net)" "select status_code, left(coalesce(content::text,''),160) content, created from net._http_response order by created desc limit 5"
+          q "Secrete Vault (doar nume)" "select name from vault.secrets order by name"
+          q "Postări pe stări" "select platform, status, count(*) from public.posts group by 1,2 order by 1,2"
+          q "Conturi sociale" "select platform, status, account_name from public.social_accounts"
+          q "Programări" "select platform, enabled, slots from public.publishing_schedules"
+          q "Permisiuni service_role" "select table_name, string_agg(privilege_type, ',') from information_schema.role_table_grants where grantee = 'service_role' and table_schema = 'public' group by 1 order by 1"
+          q "Permisiuni authenticated" "select table_name, string_agg(privilege_type, ',') from information_schema.role_table_grants where grantee = 'authenticated' and table_schema = 'public' group by 1 order by 1"
+          q "Politici RLS" "select tablename, policyname, cmd from pg_policies where schemaname = 'public' order by 1"
+          q "Media" "select count(*), coalesce(sum(size_bytes),0) bytes from public.media_assets"
+          echo "### Edge Functions"
+          curl -sS "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/functions" -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" | jq -c '[.[] | {slug, status, verify_jwt, version}]'
+          echo "### Nume secrete Edge Functions (fără valori)"
+          curl -sS "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/secrets" -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" | jq -c '[.[].name]'
