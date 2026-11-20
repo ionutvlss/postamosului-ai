@@ -66,7 +66,7 @@ Deno.serve(async (request) => {
     if (!title) throw new HttpError(400, 'title este obligatoriu')
     const captions = (input.captions && typeof input.captions === 'object') ? input.captions as Record<string, unknown> : {}
     const defaultCaption = String(captions.default || input.caption || title).slice(0, 2200)
-    const hashtags = Array.isArray(input.hashtags) ? input.hashtags.map(String).map(t => t.trim()).filter(Boolean).slice(0, 15) : []
+    const hashtags = Array.isArray(input.hashtags) ? (input.hashtags as unknown[]).map(String).map((t: string) => t.trim()).filter(Boolean).slice(0, 15) : []
     const platforms = (Array.isArray(input.platforms) && input.platforms.length ? input.platforms : PLATFORMS)
       .map(String).filter((p: string): p is Platform => (PLATFORMS as readonly string[]).includes(p))
     if (!platforms.length) throw new HttpError(400, 'Nicio platformă validă')
