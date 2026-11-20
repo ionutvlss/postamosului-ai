@@ -1,29 +1,23 @@
 #!/usr/bin/env python3
-"""Afișe premium pentru grupuri/feed (4:5, 1080x1350) pe o scenă generată cu Moșul.
+"""Afișe premium pentru feed și grupuri (4:5, 1080x1350) pe o scenă generată cu Moșul.
 
 Șabloane:
-  cinematic  – titlu serif sus pe cer, accent scris de mână, panou de sticlă jos cu site + preț
-  letter     – scenă caldă sus, card crem jos (ca o scrisoare) cu titlu, text și sigiliu de preț
-  classic    – fotografie + titlu mare alb + bandă roșie jos
+  editorial   – fotografia pe tot cadrul, umbră caldă jos, titlu serif cu accent italic auriu, ramă fină
+  invitation  – scena sus, jos o carte de vizită fildeș (ca o invitație) cu titlu, text și medalion de preț
+  (vechile nume: cinematic → editorial, letter/classic → invitation)
 
-  python3 make_poster.py --template cinematic --image scena.png --kicker "Pentru copilul tău" \
-      --title "Un mesaj de la Moș Crăciun, cu numele lui" --subtitle "Videoclip personalizat · gata în sub o oră" --out p.jpg
+Textul cu accent: *cuvinte* = italic auriu, | = rând nou.
+
+  python3 make_poster.py --template editorial --image scena.png --kicker "Pentru copilul tău" \
+      --title "Un mesaj de la Moș Crăciun,|*cu numele lui*" --out p.jpg
 """
-import argparse, os, random
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+import argparse, os, sys
+from PIL import Image, ImageDraw, ImageFilter
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-F = lambda n: os.path.join(HERE, "fonts", n)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import brand as B
+
 W, H = 1080, 1350
-GOLD, GOLD_D, RED, NAVY, CREAM, INK = (238, 197, 112), (196, 150, 70), (178, 22, 42), (10, 18, 36), (250, 243, 230), (40, 28, 22)
-
-
-def font(name, size, weight=None):
-    f = ImageFont.truetype(F(name), size)
-    if weight:
-        try: f.set_variation_by_axes([weight])
-        except Exception: pass
-    return f
 
 
 def cover(img, w, h, focus_y=0.4):
@@ -33,155 +27,144 @@ def cover(img, w, h, focus_y=0.4):
     return img.crop((l, t, l + w, t + h))
 
 
-def wrap(d, text, fnt, width):
-    lines, cur = [], ""
-    for word in text.split():
-        test = f"{cur} {word}".strip()
-        if d.textlength(test, font=fnt) <= width: cur = test
-        else: lines.append(cur); cur = word
-    return lines + ([cur] if cur else [])
+def grade(img):
+    """Aceeași gradare caldă ca în clipuri, ca afișele și videoclipurile să pară din aceeași campanie."""
+    from PIL import ImageEnhance
+    img = ImageEnhance.Contrast(img.convert("RGB")).enhance(1.05)
+    img = ImageEnhance.Color(img).enhance(1.04)
+    r, g, b = img.split()
+    r = r.point(lambda v: min(255, int(v * 1.02 + 2)))
+    b = b.point(lambda v: int(v * 0.96))
+    return Image.merge("RGB", (r, g, b))
 
 
-def centered(d, y, text, fnt, fill, shadow=None, spacing=0):
-    w = d.textlength(text, font=fnt)
-    if shadow: d.text(((W - w) / 2 + 2, y + 3), text, font=fnt, fill=shadow)
-    d.text(((W - w) / 2, y), text, font=fnt, fill=fill)
+def vignette(img, strength=120):
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).ellipse([-W * 0.25, -H * 0.2, W * 1.25, H * 1.2], fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(160))
+    dark = Image.new("RGB", img.size, (10, 6, 7))
+    return Image.composite(img, Image.blend(img, dark, strength / 255), mask)
 
 
-def vertical_fade(img, color, start, end, max_alpha, top=False):
-    mask = Image.new("L", (1, H))
-    for y in range(H):
-        t = (start - y) / (start - end) if top else (y - start) / (end - start)
-        mask.putpixel((0, y), int(max(0, min(1, t)) ** 1.3 * max_alpha))
-    return Image.composite(Image.new("RGB", (W, H), color), img, mask.resize((W, H)))
+def kicker(d, y, text, color):
+    t = text.upper()
+    f = B.font(B.SANS_SEMI, 24)
+    tw = B.tracked_width(d, t, f, 8)
+    B.draw_tracked(d, (W / 2, y), t, f, color, tracking=8, anchor="m")
+    for s in (-1, 1):
+        x0 = W / 2 + s * (tw / 2 + 22)
+        d.line([(x0, y + 15), (x0 + s * 46, y + 15)], fill=color, width=2)
 
 
-def sparkles(img, n=70, seed=7, region=(0, 0, W, H)):
-    rnd = random.Random(seed)
-    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    d = ImageDraw.Draw(layer)
-    for _ in range(n):
-        x, y = rnd.randint(region[0], region[2]), rnd.randint(region[1], region[3])
-        r = rnd.choice([1, 1, 2, 2, 3])
-        d.ellipse([x - r, y - r, x + r, y + r], fill=(255, 255, 255, rnd.randint(90, 200)))
-    layer = layer.filter(ImageFilter.GaussianBlur(0.6))
-    return Image.alpha_composite(img.convert("RGBA"), layer).convert("RGB")
-
-
-def frame(d, inset=28, color=GOLD, width=2):
-    d.rectangle([inset, inset, W - inset, H - inset], outline=color, width=width)
-    for cx, cy in [(inset, inset), (W - inset, inset), (inset, H - inset), (W - inset, H - inset)]:
-        d.ellipse([cx - 5, cy - 5, cx + 5, cy + 5], fill=color)
-
-
-def seal(img, cx, cy, top="de la", big="39", unit="lei"):
-    layer = Image.new("RGBA", img.size, (0, 0, 0, 0)); d = ImageDraw.Draw(layer)
-    r = 92
-    d.ellipse([cx - r + 6, cy - r + 10, cx + r + 6, cy + r + 10], fill=(0, 0, 0, 90))
-    layer = layer.filter(ImageFilter.GaussianBlur(8)); d = ImageDraw.Draw(layer)
-    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=RED + (255,))
-    d.ellipse([cx - r + 10, cy - r + 10, cx + r - 10, cy + r - 10], outline=GOLD + (255,), width=3)
-    f1, f2, f3 = font("Montserrat.ttf", 22, 700), font("PlayfairDisplay-Black.ttf", 62), font("Montserrat.ttf", 24, 800)
-    for txt, f, y in [(top, f1, cy - 62), (big, f2, cy - 40), (unit, f3, cy + 36)]:
-        w = d.textlength(txt, font=f); d.text((cx - w / 2, y), txt, font=f, fill=CREAM + (255,))
-    return Image.alpha_composite(img.convert("RGBA"), layer).convert("RGB")
-
-
-def cinematic(base, a):
-    img = cover(base, W, H, 0.35)
-    img = vertical_fade(img, NAVY, 520, 0, 215, top=True)
-    img = vertical_fade(img, NAVY, 900, H, 235)
-    img = sparkles(img, 80, region=(40, 40, W - 40, 520))
+def editorial(base, a):
+    img = vignette(grade(cover(base, W, H, 0.35)), 90).convert("RGBA")
+    img.alpha_composite(B.vertical_gradient(W, 260, [(0, (12, 7, 8, 150)), (1, (12, 7, 8, 0))]), (0, 0))
+    img.alpha_composite(B.vertical_gradient(W, 760, [(0, (14, 7, 9, 0)), (0.45, (14, 7, 9, 170)), (1, (10, 5, 7, 245))]), (0, H - 760))
     d = ImageDraw.Draw(img)
-    frame(d)
-    y = 92
+    B.frame(d, (34, 34, W - 34, H - 34), B.rgba(B.CHAMPAGNE, 190), inset=10, width=2)
+    sig = B.font(B.SANS_SEMI, 22)
+    B.draw_tracked(d, (W / 2, 78), "POȘTA MOȘULUI", sig, B.rgba(B.IVORY, 230), tracking=9, anchor="m")
+
+    lines = len(B.parse_rich(a.title))
+    size = B.fit_rich(a.title, 82 if lines <= 2 else 72, 880)
+    y = H - 140 - 150 - lines * size * 1.02 - (60 if a.kicker else 0)
     if a.kicker:
-        centered(d, y, a.kicker, font("GreatVibes.ttf", 74), GOLD, shadow=(0, 0, 0)); y += 98
-    tf = font("PlayfairDisplay-Black.ttf", 76)
-    for line in wrap(d, a.title, tf, W - 180):
-        centered(d, y, line, tf, CREAM, shadow=(0, 0, 0)); y += 90
-    d.line([(W / 2 - 70, y + 34), (W / 2 + 70, y + 34)], fill=GOLD, width=2)
-    # panou de sticlă jos
-    panel = (70, H - 270, W - 70, H - 80)
-    region = img.crop(panel).filter(ImageFilter.GaussianBlur(14))
-    glass = Image.new("RGBA", region.size, (10, 18, 36, 150))
-    region = Image.alpha_composite(region.convert("RGBA"), glass)
-    img.paste(region.convert("RGB"), panel[:2])
+        kicker(d, y, a.kicker, B.rgba(B.CHAMPAGNE)); y += 62
+    shadow, text = Image.new("RGBA", img.size, (0, 0, 0, 0)), Image.new("RGBA", img.size, (0, 0, 0, 0))
+    y = B.draw_rich(ImageDraw.Draw(text), W / 2, y, a.title, size, B.rgba(B.IVORY), B.rgba(B.GOLD_LIGHT), line_gap=1.02, shadow=ImageDraw.Draw(shadow))
+    img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(10)))
+    img.alpha_composite(text)
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle(panel, radius=26, outline=GOLD + (0,), width=2)
-    d.rounded_rectangle(panel, radius=26, outline=GOLD, width=2)
-    sf = font("Montserrat.ttf", 32, 600)
-    centered(d, H - 245, a.subtitle, sf, CREAM)
-    cf = font("Montserrat.ttf", 52, 850)
-    centered(d, H - 185, a.cta, cf, GOLD)
-    pf = font("Montserrat.ttf", 30, 700)
-    centered(d, H - 122, a.price_line, pf, CREAM)
-    return img
+    y += 40
+    d.line([(W / 2 - 50, y), (W / 2 + 50, y)], fill=B.rgba(B.CHAMPAGNE, 200), width=2)
+    y += 34
+    B.draw_tracked(d, (W / 2, y), a.cta.upper(), B.font(B.SANS_SEMI, 34), B.rgba(B.IVORY), tracking=7, anchor="m")
+    y += 62
+    B.draw_tracked(d, (W / 2, y), a.details, B.font(B.SANS, 25), B.rgba(B.IVORY, 200), tracking=1, anchor="m")
+    return B.grain(img.convert("RGB"), 5)
 
 
-def letter(base, a):
-    top_h = 820
-    img = Image.new("RGB", (W, H), CREAM)
-    scene = cover(base, W, top_h + 80, 0.25)
-    img.paste(scene, (0, 0))
-    img = vertical_fade(img, CREAM, top_h - 160, top_h + 40, 255)
-    img = sparkles(img, 45, seed=3, region=(40, 40, W - 40, 420))
+def invitation(base, a):
+    split = 700
+    img = Image.new("RGB", (W, H), (244, 236, 222))
+    photo = vignette(grade(cover(base, W, split + 140, 0.3)), 60)
+    img.paste(photo, (0, 0))
+    img = img.convert("RGBA")
+    img.alpha_composite(B.vertical_gradient(W, 220, [(0, (12, 7, 8, 140)), (1, (12, 7, 8, 0))]), (0, 0))
+    img.alpha_composite(B.vertical_gradient(W, 200, [(0, (244, 236, 222, 0)), (1, (244, 236, 222, 255))]), (0, split + 140 - 200))
     d = ImageDraw.Draw(img)
-    card = (64, top_h - 70, W - 64, H - 64)
-    shadow = Image.new("RGBA", img.size, (0, 0, 0, 0)); sd = ImageDraw.Draw(shadow)
-    sd.rounded_rectangle((card[0] + 6, card[1] + 14, card[2] + 6, card[3] + 14), radius=22, fill=(60, 30, 10, 70))
-    img = Image.alpha_composite(img.convert("RGBA"), shadow.filter(ImageFilter.GaussianBlur(14))).convert("RGB")
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle(card, radius=22, fill=(255, 250, 240), outline=GOLD_D, width=2)
-    d.rounded_rectangle((card[0] + 12, card[1] + 12, card[2] - 12, card[3] - 12), radius=16, outline=(232, 214, 180), width=1)
-    y = card[1] + 34
-    if a.kicker:
-        centered(d, y, a.kicker, font("GreatVibes.ttf", 64), RED); y += 82
-    tf = font("PlayfairDisplay-Black.ttf", 60)
-    for line in wrap(d, a.title, tf, card[2] - card[0] - 300):
-        w = d.textlength(line, font=tf); d.text((card[0] + 50, y), line, font=tf, fill=INK); y += 72
-    sf = font("Montserrat.ttf", 29, 500)
-    for line in wrap(d, a.subtitle, sf, card[2] - card[0] - 300):
-        d.text((card[0] + 50, y + 10), line, font=sf, fill=(110, 86, 66)); y += 40
-    cf = font("Montserrat.ttf", 40, 850)
-    d.text((card[0] + 50, card[3] - 86), a.cta, font=cf, fill=RED)
-    img = seal(img, card[2] - 130, card[1] + 150, top="de la", big="39", unit="lei")
-    return img
+    B.draw_tracked(d, (W / 2, 70), "POȘTA MOȘULUI", B.font(B.SANS_SEMI, 22), B.rgba(B.IVORY, 235), tracking=9, anchor="m")
 
-
-def classic(base, a):
-    img = cover(base, W, H, 0.3)
-    img = vertical_fade(img, NAVY, int(H * 0.45), H, 235)
+    # cartea fildeș, cu umbră moale și hârtie ușor texturată
+    cx0, cy0, cx1, cy1 = 70, split - 40, W - 70, H - 60
+    sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(sh).rounded_rectangle([cx0, cy0 + 18, cx1, cy1 + 18], radius=10, fill=(30, 12, 10, 120))
+    img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(26)))
+    card = B.vertical_gradient(cx1 - cx0, cy1 - cy0, [(0, (251, 246, 236, 255)), (1, (243, 233, 215, 255))])
+    card = B.grain(card, 4)
+    mask = Image.new("L", card.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, card.width - 1, card.height - 1], radius=10, fill=255)
+    img.paste(card, (cx0, cy0), mask)
     d = ImageDraw.Draw(img)
-    tf = font("Montserrat.ttf", 78, 850)
-    lines = wrap(d, a.title.upper(), tf, W - 140)
-    y = H - 128 - 60 - len(lines) * 92 - 70
-    for line in lines:
-        centered(d, y, line, tf, (255, 255, 255), shadow=(0, 0, 0)); y += 92
-    centered(d, y + 12, a.subtitle, font("Montserrat.ttf", 38, 600), GOLD)
-    d.rectangle([0, H - 128, W, H], fill=RED)
-    d.text((60, H - 90), a.cta, font=font("Montserrat.ttf", 50, 850), fill=(255, 255, 255))
-    pf = font("Montserrat.ttf", 40, 700); pw = d.textlength(a.price, font=pf)
-    d.rounded_rectangle([W - 104 - pw, H - 98, W - 60, H - 30], radius=34, fill=GOLD)
-    d.text((W - 82 - pw, H - 88), a.price, font=pf, fill=NAVY)
-    return img
+    B.frame(d, (cx0 + 22, cy0 + 22, cx1 - 22, cy1 - 22), B.rgba(B.GOLD, 200), inset=8, width=2)
+
+    ink, accent = B.rgba(B.INK), B.rgba((140, 28, 40))
+
+    def content(d, y):
+        B.ornament(d, W / 2, y, 200, B.rgba(B.GOLD))
+        y += 34
+        if a.kicker:
+            f = B.font(B.SERIF_ITALIC, 42)
+            d.text((W / 2, y), a.kicker, font=f, fill=B.rgba(B.GOLD[:3]), anchor="mt")
+            y += 64
+        lines = len(B.parse_rich(a.title))
+        y = B.draw_rich(d, W / 2, y, a.title, B.fit_rich(a.title, 66 if lines <= 2 else 58, 800), ink, accent, line_gap=1.12)
+        y += 44
+        for line in a.subtitle.split("|"):
+            d.text((W / 2, y), line, font=B.font(B.SANS, 26), fill=(90, 74, 64, 255), anchor="mt")
+            y += 40
+        y += 30
+        B.draw_tracked(d, (W / 2, y), a.cta.upper(), B.font(B.SANS_SEMI, 30), B.rgba((120, 24, 36)), tracking=7, anchor="m")
+        return y + 30
+
+    scratch = ImageDraw.Draw(Image.new("RGBA", (W, H)))
+    height = content(scratch, 0)
+    content(d, cy0 + (cy1 - cy0 - height) / 2 + 8)
+
+    # medalion de preț, ca un sigiliu de ceară, la marginea dintre fotografie și carte
+    mx, my, r = cx1 - 110, cy0 - 6, 84
+    med = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    md = ImageDraw.Draw(med)
+    md.ellipse([mx - r + 4, my - r + 12, mx + r + 4, my + r + 12], fill=(20, 4, 8, 110))
+    med = med.filter(ImageFilter.GaussianBlur(10))
+    md = ImageDraw.Draw(med)
+    disc = B.vertical_gradient(2 * r, 2 * r, [(0, (128, 22, 36, 255)), (1, (78, 12, 22, 255))])
+    dm = Image.new("L", disc.size, 0); ImageDraw.Draw(dm).ellipse([0, 0, 2 * r - 1, 2 * r - 1], fill=255)
+    med.paste(disc, (mx - r, my - r), dm)
+    md = ImageDraw.Draw(med)
+    md.ellipse([mx - r + 9, my - r + 9, mx + r - 9, my + r - 9], outline=B.rgba(B.CHAMPAGNE, 220), width=2)
+    md.text((mx, my - 34), "de la", font=B.font(B.SERIF_ITALIC, 28), fill=B.rgba(B.CHAMPAGNE), anchor="ms")
+    md.text((mx, my + 24), "39", font=B.font(B.SERIF_BOLD, 68), fill=B.rgba(B.IVORY), anchor="ms")
+    B.draw_tracked(md, (mx + 3, my + 38), "LEI", B.font(B.SANS_SEMI, 17), B.rgba(B.CHAMPAGNE), tracking=5, anchor="m")
+    img.alpha_composite(med)
+    return img.convert("RGB")
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--template", default="cinematic", choices=["cinematic", "letter", "classic"])
+    ap.add_argument("--template", default="editorial", choices=["editorial", "invitation", "cinematic", "letter", "classic"])
     ap.add_argument("--image", required=True)
     ap.add_argument("--kicker", default="")
     ap.add_argument("--title", required=True)
-    ap.add_argument("--subtitle", default="Videoclip personalizat · gata în sub o oră")
+    ap.add_argument("--subtitle", default="Un videoclip doar pentru copilul tău,|despre anul lui și dorința de Crăciun.")
     ap.add_argument("--cta", default="POSTAMOSULUI.RO")
-    ap.add_argument("--price", default="de la 39 lei")
-    ap.add_argument("--price-line", default="de la 39 lei · fără cont · plată cu cardul")
+    ap.add_argument("--details", default="De la 39 lei  ·  Gata în sub o oră  ·  Fără cont")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
+    template = {"cinematic": "editorial", "letter": "invitation", "classic": "invitation"}.get(a.template, a.template)
     base = Image.open(a.image).convert("RGB")
-    img = {"cinematic": cinematic, "letter": letter, "classic": classic}[a.template](base, a)
-    img.save(a.out, quality=92)
+    out = editorial(base, a) if template == "editorial" else invitation(base, a)
+    out.save(a.out, quality=93, subsampling=0)
     print(a.out)
 
 

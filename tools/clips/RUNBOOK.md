@@ -28,7 +28,7 @@ Instagram Reels și YouTube Shorts, în „De aprobat”, la sloturile 1 și 2 a
 ```bash
 python3 tools/clips/make_clip.py --video avatar.mp4 --spec spec.json --out clip.mp4
 ```
-`spec.json` = `{lines, hook, highlight, style}` din script (+ `cta`, `cta_sub` din `defaults`).
+`spec.json` = `{lines, kicker, hook, highlight, style, end_title}` din script (+ `cta`, `cta_sub`, `button` din `defaults`). Stilul vizual (premium, editorial) e fix în `make_clip.py` și `brand.py`; nu adăuga benzi colorate, emoji sau majuscule în hook.
 Verifică 3 cadre (0,5 s, mijloc, final): text lizibil, nu acoperă fața, CTA la final.
 
 Alternativ, dacă sunt credite OpusClip: AI Producer (`start_project_from_attachment` cu URL-ul avatarului → `build_captions` → `start_export`).
@@ -42,16 +42,16 @@ Alternativ, dacă sunt credite OpusClip: AI Producer (`start_project_from_attach
 {
   "video_url": "<URL>", "name": "<fișier>", "title": "<title>",
   "captions": {
-    "default": "<caption> Link în bio 🎄",
-    "facebook": "<caption> 👉 postamosului.ro",
-    "youtube": "<caption> Comandă pe postamosului.ro"
+    "default": "<caption>\n\nLink în bio.",
+    "facebook": "<caption>\n\npostamosului.ro",
+    "youtube": "<caption>\n\nComandă pe postamosului.ro"
   },
   "hashtags": ["…defaults.hashtags"],
   "platforms": ["tiktok", "facebook", "instagram", "youtube"],
   "slot_index": 0,
   "ingest_id": "AAAA-LL-ZZ-<id>",
   "source": "claude-daily",
-  "hook": "<hook>", "script": "<lines unite>", "duration_seconds": 13
+  "hook": "<hook fără * și |, cu | înlocuit de spațiu>", "script": "<lines unite>", "duration_seconds": 13
 }
 ```
   Primul clip: `slot_index: 0`. Al doilea: `slot_index: 1`. Verifică răspunsul: 4 postări create.
@@ -74,7 +74,7 @@ sociale + 5 ciorne pentru grupuri, cu același clip.
 1. Fundal nou (variație de scenă), WaveSpeed: un model de editare de imagine cu referința
    `.../media/avatar/mos-vertical.jpg` (ex. Moșul la birou cu scrisori, lângă brad, cu o tabletă, în atelier),
    format portret. Max. ~0,05 $.
-2. `python3 tools/clips/make_poster.py --image fundal.jpg --title "<titlu scurt>" --subtitle "<subtitlu>" --out poster.jpg`
+2. `python3 tools/clips/make_poster.py --template editorial|invitation --image fundal.jpg --kicker "<etichetă>" --title "<titlu cu *accent* și |>" --out poster.jpg` (alternează șabloanele de la o zi la alta)
 3. Pune-l în branch-ul `media`, la `postere/AAAA-LL-ZZ.jpg`.
 4. n8n, cu `"platforms": []`, `"name": "AAAA-LL-ZZ-poster.jpg"`, `"title"`, `"ingest_id": "AAAA-LL-ZZ-grupuri"` și `"group_posts": {"texts": [5 texte]}`.
 
