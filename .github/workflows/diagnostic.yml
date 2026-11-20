@@ -32,11 +32,12 @@ jobs:
           q "Profiluri admin" "select left(id::text,8) id, full_name, role, created_at from public.profiles order by created_at"
           q "Proprietari" "select 'posts' t, left(owner_id::text,8) owner, count(*) from public.posts group by 2 union all select 'schedules', left(owner_id::text,8), count(*) from public.publishing_schedules group by 2 union all select 'media', left(owner_id::text,8), count(*) from public.media_assets group by 2"
           q "Media" "select count(*), coalesce(sum(size_bytes),0) bytes from public.media_assets"
-          q "Ultimele postări (stare și eroare)" "select left(id::text,8) id, platform, status, attempts, scheduled_for, published_at, external_post_id, external_url, left(coalesce(last_error,''),300) err, metadata->>'ig_container' ig from public.posts order by updated_at desc limit 8"
+          q "Ultimele postări (stare și eroare)" "select left(id::text,8) id, platform, status, attempts, scheduled_for, published_at, external_post_id, external_url, left(coalesce(last_error,''),300) err, metadata->>'ig_container' ig from public.posts where updated_at > now() - interval '3 hours' or status in ('publishing','failed') order by updated_at desc limit 12"
           q "Conturi conectate (fără tokenuri)" "select a.platform, a.account_name, a.external_account_id, a.status, t.expires_at, (t.access_token is not null) has_token from public.social_accounts a left join public.social_tokens t on t.account_id = a.id"
           echo "### Loguri funcții (ultimele erori)"
-          sql="select timestamp, event_message from function_logs where timestamp > timestamp_sub(current_timestamp(), interval 2 hour) order by timestamp desc limit 30"
-          curl -sS -G "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/analytics/endpoints/logs.all" --data-urlencode "sql=${sql}" -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" | jq -c '.result // .' | head -c 6000
+          sql="select datetime(timestamp) t, event_message from function_logs where event_message like '%publish%' or event_message like '%error%' order by timestamp desc limit 25"
+          now=$(date -u +%Y-%m-%dT%H:%M:%SZ); start=$(date -u -d '-3 hours' +%Y-%m-%dT%H:%M:%SZ)
+          curl -sS -G "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/analytics/endpoints/logs" --data-urlencode "sql=${sql}" --data-urlencode "iso_timestamp_start=${start}" --data-urlencode "iso_timestamp_end=${now}" -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" | jq -c '.result // .' | head -c 6000
           echo
           echo "### Edge Functions"
           curl -sS "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/functions" -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" | jq -c '[.[] | {slug, status, verify_jwt, version}]'
