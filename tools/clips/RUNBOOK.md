@@ -3,9 +3,15 @@
 Rulează o dată pe zi (dimineața). Rezultat: 2 clipuri de 10–15 s, fiecare pe TikTok, Facebook Reels,
 Instagram Reels și YouTube Shorts, în „De aprobat”, la sloturile 1 și 2 ale zilei următoare libere.
 
-## 0. Verificări înainte
-- Sold WaveSpeed ≥ 2 $ (`get_balance`). Dacă e mai mic: nu genera nimic, anunță-l pe Ioan să încarce.
-- Clonează `ionutvlss/postamosului-ai` (main) și branch-ul `media`.
+## 0. Verificări înainte (în ordinea asta, înainte de orice cost)
+1. **Butonul Start/Stop din platformă.** n8n, workflow `npH2gNtmpaCJXN5j`, `execute_workflow` manual, trigger „Primește clip”,
+   body `{"action": "status"}`. Citește răspunsul nodului „Trimite în platformă” (`get_workflow_execution`, includeData).
+   - `daily_enabled: false` → **oprește-te aici**: nu genera nimic, nu scrie nimic în jurnal, încheie cu o propoziție.
+   - `daily_enabled: true` → continuă.
+2. **Sold WaveSpeed ≥ 2 $** (`get_balance`). Dacă e mai mic: nu genera nimic; trimite în jurnal
+   `{"action": "log_run", "status": "skipped", "summary": "Sold WaveSpeed X $ — încarcă minimum 10 $"}` și anunță-l pe Ioan.
+3. Nu rula de două ori în aceeași zi: dacă `last_runs` din pasul 1 are deja `done` cu data de azi, oprește-te.
+4. Clonează `ionutvlss/postamosului-ai` (main) și branch-ul `media`.
 
 ## 1. Alege scripturile
 - Din `tools/clips/scripts.json`: 2 scripturi fără `used`, cu data de azi între `from` și `to`.
@@ -58,6 +64,10 @@ Alternativ, dacă sunt credite OpusClip: AI Producer (`start_project_from_attach
 
 ## 6. Final
 - Marchează scripturile folosite (`"used": "AAAA-LL-ZZ"`) în `scripts.json` și fă commit pe main.
+- Jurnal în platformă (apare în Automatizări → Ultimele rulări): `{"action": "log_run", "status": "done",
+  "summary": "2 clipuri: <hook 1> · <hook 2> — programate <zi> 12:30 și 19:30", "cost_usd": <cost>}`.
+  La orice eroare care oprește rularea: `"status": "failed"` cu motivul pe scurt.
+- Dacă ingest-ul răspunde 409 („Automatizarea zilnică este oprită”), Ioan a apăsat Stop între timp: nu mai trimite nimic.
 - Raport scurt pentru Ioan: cele 2 hook-uri, ora la care sunt programate, costul (vocea + avatarul) și soldul rămas.
 
 ## 7. Grupurile de Facebook (5 postări pe zi, postate manual de Ioan)
