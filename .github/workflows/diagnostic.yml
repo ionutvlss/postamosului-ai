@@ -29,6 +29,8 @@ jobs:
           q "Permisiuni service_role" "select table_name, string_agg(privilege_type, ',') from information_schema.role_table_grants where grantee = 'service_role' and table_schema = 'public' group by 1 order by 1"
           q "Permisiuni authenticated" "select table_name, string_agg(privilege_type, ',') from information_schema.role_table_grants where grantee = 'authenticated' and table_schema = 'public' group by 1 order by 1"
           q "Politici RLS" "select tablename, policyname, cmd from pg_policies where schemaname = 'public' order by 1"
+          q "Profiluri admin" "select left(id::text,8) id, full_name, role, created_at from public.profiles order by created_at"
+          q "Proprietari" "select 'posts' t, left(owner_id::text,8) owner, count(*) from public.posts group by 2 union all select 'schedules', left(owner_id::text,8), count(*) from public.publishing_schedules group by 2 union all select 'media', left(owner_id::text,8), count(*) from public.media_assets group by 2"
           q "Media" "select count(*), coalesce(sum(size_bytes),0) bytes from public.media_assets"
           echo "### Edge Functions"
           curl -sS "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/functions" -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" | jq -c '[.[] | {slug, status, verify_jwt, version}]'
