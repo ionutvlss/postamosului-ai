@@ -162,3 +162,24 @@ export async function deletePost(id) {
   const client = requireClient()
   await client.from('posts').delete().eq('id', id)
 }
+
+export async function listGroupDrafts() {
+  const client = requireClient()
+  const { data, error } = await client.from('group_outreach_drafts').select('*').order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function updateGroupDraft(id, patch) {
+  const client = requireClient()
+  const { data, error } = await client.from('group_outreach_drafts').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateGroupCandidate(id, patch) {
+  const client = requireClient()
+  const { data, error } = await client.from('group_candidates').update(patch).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}

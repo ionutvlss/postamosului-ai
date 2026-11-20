@@ -53,6 +53,33 @@ async function nextFreeSlot(ownerId: string, platform: Platform, from: Date, pre
   throw new Error(`Nu am găsit un slot liber pentru ${platform} în următoarele 45 de zile`)
 }
 
+/** Alege grupurile la rând (cele mai de mult nefolosite, nu mai des de o dată la 6 zile) și le pune textele. */
+async function createGroupDrafts(ownerId: string, mediaId: string, texts: string[], ingestId: string | null) {
+  const db = adminClient()
+  const { data: groups } = await db.from('group_candidates').select('id, group_name')
+    .eq('owner_id', ownerId).neq('status', 'excluded').order('created_at', { ascending: true })
+  if (!groups?.length) return []
+  const since = new Date(Date.now() - 6 * 86400000).toISOString()
+  const { data: recent } = await db.from('group_outreach_drafts').select('group_id, created_at, status')
+    .eq('owner_id', ownerId).neq('status', 'rejected').order('created_at', { ascending: false }).limit(500)
+  const last = new Map<string, string>()
+  for (const row of recent || []) if (!last.has(row.group_id)) last.set(row.group_id, row.created_at)
+  const ranked = groups
+    .filter(g => !last.has(g.id) || last.get(g.id)! < since)
+    .sort((a, b) => (last.get(a.id) || '').localeCompare(last.get(b.id) || ''))
+    .slice(0, texts.length)
+  const created = []
+  for (const [i, group] of ranked.entries()) {
+    const { data, error } = await db.from('group_outreach_drafts').insert({
+      owner_id: ownerId, group_id: group.id, media_id: mediaId, body: texts[i].slice(0, 5000),
+      status: 'pending_approval', scheduled_for: new Date().toISOString(), ai_model: ingestId ? `claude:${ingestId}` : 'claude',
+    }).select('id').single()
+    if (error) throw error
+    created.push({ id: data.id, group: group.group_name })
+  }
+  return created
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
@@ -68,9 +95,11 @@ Deno.serve(async (request) => {
     const captions = (input.captions && typeof input.captions === 'object') ? input.captions as Record<string, unknown> : {}
     const defaultCaption = String(captions.default || input.caption || title).slice(0, 2200)
     const hashtags = Array.isArray(input.hashtags) ? (input.hashtags as unknown[]).map(String).map((t: string) => t.trim()).filter(Boolean).slice(0, 15) : []
-    const platforms = (Array.isArray(input.platforms) && input.platforms.length ? input.platforms : PLATFORMS)
+    const platforms = (Array.isArray(input.platforms) ? input.platforms : PLATFORMS)
       .map(String).filter((p: string): p is Platform => (PLATFORMS as readonly string[]).includes(p))
-    if (!platforms.length) throw new HttpError(400, 'Nicio platformă validă')
+    const groupTexts: string[] = Array.isArray(input.group_posts?.texts)
+      ? (input.group_posts.texts as unknown[]).map(String).map((t: string) => t.trim()).filter(Boolean).slice(0, 10) : []
+    if (!platforms.length && !groupTexts.length) throw new HttpError(400, 'Nicio platformă și niciun text pentru grupuri')
     const ingestId = String(input.ingest_id || '').slice(0, 120) || null
     const slotIndex = Number.isInteger(input.slot_index) ? Number(input.slot_index) : undefined
     const startFrom = input.not_before ? new Date(String(input.not_before)) : new Date(Date.now() + 30 * 60000)
@@ -91,19 +120,23 @@ Deno.serve(async (request) => {
     if (ingestId) {
       const { data: existing } = await db.from('posts').select('id, platform, scheduled_for, media_id').eq('owner_id', owner.id).eq('metadata->>ingest_id', ingestId)
       if (existing?.length) return json({ duplicate: true, media_id: existing[0].media_id, posts: existing })
+      const { data: existingDrafts } = await db.from('group_outreach_drafts').select('id, media_id').eq('owner_id', owner.id).eq('ai_model', `claude:${ingestId}`)
+      if (existingDrafts?.length) return json({ duplicate: true, media_id: existingDrafts[0].media_id, group_drafts: existingDrafts })
     }
 
     const video = await fetch(videoUrl)
     if (!video.ok) throw new Error(`Nu am putut descărca videoclipul (${video.status})`)
     const bytes = new Uint8Array(await video.arrayBuffer())
     if (bytes.byteLength > MAX_BYTES) throw new HttpError(413, 'Videoclipul depășește 200 MB')
-    const mime = (video.headers.get('content-type') || 'video/mp4').split(';')[0]
     const name = String(input.name || `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60) || 'clip'}.mp4`)
+    const ext = name.toLowerCase().split('.').pop() || ''
+    const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'video/mp4'
+    if (mime.startsWith('image/') && platforms.length) throw new HttpError(400, 'Imaginile merg doar în grupuri (platforms: [])')
     const path = `${owner.id}/${crypto.randomUUID()}-${name.replace(/[^a-zA-Z0-9._-]/g, '-')}`
-    const { error: uploadError } = await db.storage.from('media').upload(path, bytes, { contentType: mime.startsWith('video/') ? mime : 'video/mp4' })
+    const { error: uploadError } = await db.storage.from('media').upload(path, bytes, { contentType: mime })
     if (uploadError) throw uploadError
     const { data: asset, error: assetError } = await db.from('media_assets').insert({
-      owner_id: owner.id, name, storage_path: path, mime_type: 'video/mp4', size_bytes: bytes.byteLength,
+      owner_id: owner.id, name, storage_path: path, mime_type: mime, size_bytes: bytes.byteLength,
       duration_seconds: Number(input.duration_seconds) || null,
     }).select('id').single()
     if (assetError) throw assetError
@@ -120,7 +153,8 @@ Deno.serve(async (request) => {
       if (error) throw error
       created.push(post)
     }
-    return json({ media_id: asset.id, posts: created })
+    const groupDrafts = groupTexts.length ? await createGroupDrafts(owner.id, asset.id, groupTexts, ingestId) : []
+    return json({ media_id: asset.id, posts: created, group_drafts: groupDrafts })
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500
     console.error('ingest-video', (error as Error).message)

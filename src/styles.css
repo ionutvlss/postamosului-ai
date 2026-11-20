@@ -38,3 +38,6 @@
 .modal-actions{display:flex;justify-content:flex-end;gap:8px}
 .sidebar-backdrop{display:none}
 @media(max-width:680px){.sidebar.open{display:flex;z-index:50;box-shadow:20px 0 60px #000a}.sidebar-backdrop{display:block;position:fixed;inset:0;background:#0008;z-index:45}}
+.media-frame img,.queue-video img{width:100%;height:100%;object-fit:contain;background:#06090d;display:block}
+.group-text{white-space:pre-line;font-size:11px;line-height:1.65;color:#c6ccd2;margin:0;background:#0f151c;border:1px solid #232d39;border-radius:8px;padding:10px 12px}
+.group-row.paused{opacity:.5}

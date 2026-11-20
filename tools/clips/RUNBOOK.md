@@ -59,3 +59,24 @@ Alternativ, dacă sunt credite OpusClip: AI Producer (`start_project_from_attach
 ## 6. Final
 - Marchează scripturile folosite (`"used": "AAAA-LL-ZZ"`) în `scripts.json` și fă commit pe main.
 - Raport scurt pentru Ioan: cele 2 hook-uri, ora la care sunt programate, costul (vocea + avatarul) și soldul rămas.
+
+## 7. Grupurile de Facebook (5 postări pe zi, postate manual de Ioan)
+Alternanță: **zilele pare = clip** (unul dintre clipurile zilei), **zilele impare = imagine AI**.
+
+**Textele (5, toate diferite):** 50–110 cuvinte, ton de părinte pentru părinți, nu de reclamă. Încep cu ceva util
+sau personal (o idee de surpriză, o întrebare), produsul vine natural la mijloc, iar linkul `postamosului.ro` la final.
+Fără majuscule în exces, maximum 2 emoji, fără hashtag-uri. Fiecare text cu alt început și altă structură.
+
+**Ziua cu clip:** la apelul n8n pentru primul clip adaugă `"group_posts": {"texts": [5 texte]}`. Aceleași postări
+sociale + 5 ciorne pentru grupuri, cu același clip.
+
+**Ziua cu imagine:**
+1. Fundal nou (variație de scenă), WaveSpeed: un model de editare de imagine cu referința
+   `.../media/avatar/mos-vertical.jpg` (ex. Moșul la birou cu scrisori, lângă brad, cu o tabletă, în atelier),
+   format portret. Max. ~0,05 $.
+2. `python3 tools/clips/make_poster.py --image fundal.jpg --title "<titlu scurt>" --subtitle "<subtitlu>" --out poster.jpg`
+3. Pune-l în branch-ul `media`, la `postere/AAAA-LL-ZZ.jpg`.
+4. n8n, cu `"platforms": []`, `"name": "AAAA-LL-ZZ-poster.jpg"`, `"title"`, `"ingest_id": "AAAA-LL-ZZ-grupuri"` și `"group_posts": {"texts": [5 texte]}`.
+
+Platforma alege singură cele 5 grupuri (cele mai de mult nefolosite, niciunul de două ori în 6 zile) și le pune în
+„Grupuri Facebook → De postat azi”. Dacă sunt mai puține grupuri disponibile, creează doar câte încap.

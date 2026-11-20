@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
-import { deletePost, listPublishingSchedules, listSocialAccounts, publishNow, startConnect, createContentVariant, createGroupCandidate, createGroupOutreachDraft, createPost, deleteMedia, generateContent, getProfile, listAutomationSettings, listGroupCandidates, listMedia, listPosts, saveAutomationSettings, savePublishingSchedule, updatePost, updateProfile, uploadMedia } from './lib/api'
+import { listGroupDrafts, updateGroupDraft, updateGroupCandidate, deletePost, listPublishingSchedules, listSocialAccounts, publishNow, startConnect, createContentVariant, createGroupCandidate, createGroupOutreachDraft, createPost, deleteMedia, generateContent, getProfile, listAutomationSettings, listGroupCandidates, listMedia, listPosts, saveAutomationSettings, savePublishingSchedule, updatePost, updateProfile, uploadMedia } from './lib/api'
 
 const icons = { grid:'⌘', social:'◎', media:'▣', studio:'✦', calendar:'▦', groups:'♧', analytics:'↗', settings:'⚙' }
 const nav = [
@@ -140,8 +140,8 @@ function MediaCard({m,onRemove,usage}){
   const dur=meta?.duration?`${Math.round(meta.duration)} s`:null
   const added=m.created_at?new Date(m.created_at).toLocaleDateString('ro-RO',{day:'numeric',month:'short'}):'acum'
   return <div className={`media-card ${meta?(meta.vertical?'is-vertical':'is-horizontal'):''}`}>
-    <div className="media-frame">{m.preview_url?<video src={m.preview_url} controls playsInline preload="metadata" onLoadedMetadata={onMeta}/>:<span className="media-placeholder">▶</span>}
-      {meta&&<span className="media-badge">{meta.vertical?'9:16':'16:9'}{dur?` · ${dur}`:''}</span>}</div>
+    <div className="media-frame">{m.preview_url?(m.mime_type?.startsWith('image/')?<img src={m.preview_url} alt="" onLoad={e=>setMeta({vertical:e.currentTarget.naturalHeight>e.currentTarget.naturalWidth})}/>:<video src={m.preview_url} controls playsInline preload="metadata" onLoadedMetadata={onMeta}/>):<span className="media-placeholder">▶</span>}
+      {meta&&<span className="media-badge">{m.mime_type?.startsWith('image/')?'Imagine':meta.vertical?'9:16':'16:9'}{dur?` · ${dur}`:''}</span>}</div>
     <div className="media-info"><b title={m.name}>{m.name}</b><small>{size} · {added}{usage?` · folosit în ${usage} postări`:''}</small>
       {m.id&&<button className="media-delete" onClick={()=>onRemove(m)}>Șterge</button>}</div>
   </div>
@@ -152,7 +152,7 @@ function Media({media,setMedia,user,onNotice}){
   const onFile=async e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;if(!user){onNotice('Autentifică-te pentru a încărca');return}setUploading(true);try{const asset=await uploadMedia(f,user.id);setMedia(m=>[asset,...m]);onNotice('Videoclipul a fost încărcat')}catch(error){onNotice(`Încărcarea a eșuat: ${error.message}`)}finally{setUploading(false)}}
   const remove=async asset=>{if(!user)return;const used=usage[asset.id];if(!window.confirm(used?`Clipul e folosit în ${used} postări programate. Dacă îl ștergi, acele postări rămân fără video. Ștergi oricum?`:`Ștergi „${asset.name}”?`))return;try{await deleteMedia(asset);setMedia(items=>items.filter(item=>item.id!==asset.id));onNotice('Videoclipul a fost șters')}catch(error){onNotice(`Ștergerea a eșuat: ${error.message}`)}}
   const visible=media.filter(item=>item.name.toLowerCase().includes(query.toLowerCase()))
-  return <><PageTitle eyebrow="BIBLIOTECĂ" title="Media library" desc="Toate clipurile tale, inclusiv cele generate automat pentru reclame." action={<label className="primary upload">{uploading?'Se încarcă…':'＋ Încarcă videoclip'}<input type="file" accept="video/*" onChange={onFile} disabled={uploading}/></label>}/>
+  return <><PageTitle eyebrow="BIBLIOTECĂ" title="Media library" desc="Toate clipurile tale, inclusiv cele generate automat pentru reclame." action={<label className="primary upload">{uploading?'Se încarcă…':'＋ Încarcă media'}<input type="file" accept="video/*,image/*" onChange={onFile} disabled={uploading}/></label>}/>
   <div className="media-toolbar"><div className="search">⌕ <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Caută în bibliotecă..."/></div><span className="muted">{visible.length} clipuri</span></div>
   {!visible.length&&<div className="card empty-media"><span>▣</span><b>Nu ai încă niciun clip</b><p className="muted">Încarcă un videoclip sau așteaptă clipurile generate zilnic.</p></div>}
   <div className="media-grid-v2">{visible.map((m,i)=><MediaCard key={m.id||i} m={m} onRemove={remove} usage={usage[m.id]}/>)}</div></>}
@@ -161,7 +161,7 @@ function Composer({onClose,onCreated,onNotice}){
   const [media,setMedia]=useState([]),[mediaId,setMediaId]=useState(''),[platforms,setPlatforms]=useState(['tiktok','facebook','instagram','youtube'])
   const tomorrow=new Date(Date.now()+86400000)
   const [day,setDay]=useState(localDay(tomorrow)),[time,setTime]=useState('19:30'),[title,setTitle]=useState(''),[body,setBody]=useState(''),[tags,setTags]=useState('#PostaMosului #MosCraciun #Craciun'),[busy,setBusy]=useState(false)
-  useEffect(()=>{listMedia().then(items=>{setMedia(items);if(items[0])setMediaId(items[0].id)}).catch(()=>{})},[])
+  useEffect(()=>{listMedia().then(all=>{const items=all.filter(m=>!m.mime_type?.startsWith('image/'));setMedia(items);if(items[0])setMediaId(items[0].id)}).catch(()=>{})},[])
   const toggle=p=>setPlatforms(list=>list.includes(p)?list.filter(x=>x!==p):[...list,p])
   const preview=media.find(m=>m.id===mediaId)?.preview_url
   const submit=async()=>{
@@ -241,16 +241,52 @@ function Calendar({posts,onAdd,onNotice}){
     {recent.length>0&&<><h3 className="queue-subtitle">Publicate recent</h3><div className="recent-list">{recent.map(post=><div className="post-row" key={post.id}><span className={'platform '+post.color}>{(PLATFORM[post.platform?.toLowerCase()]||{}).icon}</span><div className="post-copy"><b>{post.title}</b><small>{post.platform} · {post.published_at?new Date(post.published_at).toLocaleString('ro-RO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''}{post.last_error?` · ${post.last_error}`:''}</small></div>{post.external_url&&<a className="text-btn" href={post.external_url} target="_blank" rel="noreferrer">Vezi →</a>}</div>)}</div></>}
   </section>
   <div className="calendar-top"><button className="outline" onClick={()=>setWeek(w=>w-1)}>‹</button><h2>{monthLabel}</h2><button className="outline" onClick={()=>setWeek(w=>w+1)}>›</button>{week!==0&&<button className="text-btn" onClick={()=>setWeek(0)}>Azi</button>}</div><div className="calendar-card card"><div className="week-head"><span></span>{days.map(day=><span className={day.date===todayKey?'today':''} key={day.date}>{day.label}</span>)}</div><div className="week-body">{times.map((t,i)=><div className="time-row" key={t}><time>{t}</time>{days.map((_,d)=><div className="slot" key={d}>{eventFor(d,i).map(post=><div className={`event ${post.color}-event`} key={post.id}><b title={post.title}>{displayTitle(post.title)}</b><small>{post.platform} · {post.status}</small>{post.rawStatus!=='publishing'&&post.rawStatus!=='published'&&<button className="event-delete" title="Șterge postarea" onClick={()=>remove(post)}>✕</button>}{post.rawStatus==='pending_approval'&&<button className="approve-btn" onClick={()=>approve(post)}>Aprobă</button>}</div>)}</div>)}</div>)}</div></div><div className="calendar-foot"><span><i className="dot red-dot"/>Instagram</span><span><i className="dot blue-dot"/>Facebook</span><span><i className="dot gold-dot"/>YouTube</span><span><i className="dot tt-dot"/>TikTok</span><small>{livePosts.filter(post=>post.rawStatus==='pending_approval').length} în aprobare · {livePosts.length} postări</small></div></>}
+async function fetchFile(url,name,type){const blob=await (await fetch(url)).blob();return new File([blob],name,{type:type||blob.type})}
+function GroupDraftCard({draft,group,media,onDone,onSkip,onNotice}){
+  const [busy,setBusy]=useState(false)
+  const isImage=media?.mime_type?.startsWith('image/')
+  const copy=async()=>{try{await navigator.clipboard.writeText(draft.body);onNotice('Textul a fost copiat')}catch{onNotice('Nu am putut copia; selectează textul manual')}}
+  const download=async()=>{if(!media?.preview_url)return;setBusy(true);try{const file=await fetchFile(media.preview_url,media.name,media.mime_type);const url=URL.createObjectURL(file);const a=document.createElement('a');a.href=url;a.download=media.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000)}catch{window.open(media.preview_url,'_blank')}finally{setBusy(false)}}
+  const share=async()=>{if(!media?.preview_url)return;setBusy(true);try{await navigator.clipboard?.writeText(draft.body).catch(()=>{});const file=await fetchFile(media.preview_url,media.name,media.mime_type);if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],text:draft.body})}else{onNotice('Telefonul nu permite trimiterea directă; folosește Descarcă')}}catch(e){if(e?.name!=='AbortError')onNotice('Trimiterea a fost anulată')}finally{setBusy(false)}}
+  return <div className="queue-item">
+    <div className="queue-video">{media?.preview_url?(isImage?<img src={media.preview_url} alt=""/>:<video src={media.preview_url} controls playsInline preload="metadata"/>):<span>Fără media</span>}</div>
+    <div className="queue-body">
+      <div className="queue-meta"><span className="platform fb">f</span><b>{group?.group_name||'Grup'}</b><small>{isImage?'Imagine':'Clip'}</small>{group?.group_url&&<a className="text-btn" href={group.group_url} target="_blank" rel="noreferrer">Deschide grupul →</a>}</div>
+      <p className="group-text">{draft.body}</p>
+      <div className="queue-actions">
+        <button className="outline small" onClick={copy}>Copiază textul</button>
+        <button className="outline small" disabled={busy||!media} onClick={download}>Descarcă {isImage?'poza':'clipul'}</button>
+        {typeof navigator!=='undefined'&&navigator.share&&<button className="outline small" disabled={busy||!media} onClick={share}>Trimite din telefon</button>}
+        <button className="primary small" onClick={()=>onDone(draft)}>✓ Am postat</button>
+        <button className="outline small danger" onClick={()=>onSkip(draft)}>Sari peste</button>
+      </div>
+    </div></div>
+}
 function Groups({user,onNotice}){
-  const [groups,setGroups]=useState([]),[name,setName]=useState(''),[link,setLink]=useState(''),[topic,setTopic]=useState('mesaje video personalizate de la Moș Crăciun pentru copii'),[busy,setBusy]=useState('')
-  const load=()=>listGroupCandidates().then(rows=>setGroups(rows)).catch(()=>{})
+  const [groups,setGroups]=useState([]),[drafts,setDrafts]=useState([]),[media,setMedia]=useState({}),[name,setName]=useState(''),[link,setLink]=useState(''),[busy,setBusy]=useState('')
+  const load=()=>Promise.all([listGroupCandidates(),listGroupDrafts(),listMedia()]).then(([g,d,m])=>{setGroups(g);setDrafts(d);setMedia(Object.fromEntries(m.map(x=>[x.id,x])))}).catch(e=>onNotice(`Nu am putut încărca grupurile: ${e.message}`))
   useEffect(()=>{if(user)load()},[user])
-  const add=async()=>{if(!name.trim()){onNotice('Scrie numele grupului');return}setBusy('add');try{await createGroupCandidate({owner_id:user.id,external_group_id:`manual-${Date.now()}`,group_name:name.trim(),group_url:link.trim()||null,status:'shortlisted',language:'ro',category:'manual'});setName('');setLink('');await load();onNotice('Grupul a fost salvat')}catch(error){onNotice(`Salvarea a eșuat: ${error.message}`)}finally{setBusy('')}}
-  const draft=async group=>{setBusy(group.id);try{const result=await generateContent({prompt:`Scrie o postare utilă și naturală pentru grupul românesc de pe Facebook «${group.group_name}», despre ${topic}. Fără reclamă agresivă; începe cu ceva util pentru părinți.`,platform:'facebook_group',tone:'empatic și util',variation:Date.now()});await createGroupOutreachDraft({owner_id:user.id,group_id:group.id,body:result.body,hashtags:result.hashtags||[],ai_model:result.model||'fallback-local',status:'draft'});await navigator.clipboard?.writeText(result.body).catch(()=>{});onNotice('Textul a fost generat și copiat. Lipește-l manual în grup.')}catch(error){onNotice(`Generarea a eșuat: ${error.message}`)}finally{setBusy('')}}
-  return <><PageTitle eyebrow="GRUPURI FACEBOOK" title="Grupuri Facebook" desc="Păstrează grupurile în care postezi și generează texte potrivite pentru fiecare."/>
-  <div className="group-note">♢ <span>Meta nu mai permite postarea automată în grupuri. Platforma îți pregătește textul, tu îl postezi manual.</span></div>
-  <section className="card" style={{marginBottom:16}}><div className="form-row"><label>Numele grupului<input value={name} onChange={e=>setName(e.target.value)} placeholder="ex. Mămici din Brașov"/></label><label>Link (opțional)<input value={link} onChange={e=>setLink(e.target.value)} placeholder="https://facebook.com/groups/…"/></label></div><label className="inline-field" style={{maxWidth:'none'}}>Despre ce să fie postarea<input value={topic} onChange={e=>setTopic(e.target.value)}/></label><button className="primary" style={{marginTop:12}} disabled={busy==='add'} onClick={add}>＋ Adaugă grupul</button></section>
-  <div className="groups-list">{!groups.length&&<p className="muted">Nu ai adăugat încă niciun grup.</p>}{groups.map(group=><div className="group-row" key={group.id}><div className="group-avatar">{group.group_name.charAt(0)}</div><div className="group-main"><b>{group.group_name}</b><span>{group.group_url?<a className="text-btn" href={group.group_url} target="_blank" rel="noreferrer">Deschide grupul →</a>:'fără link'}</span></div><button className="primary small" disabled={busy===group.id} onClick={()=>draft(group)}>{busy===group.id?'Se generează…':'Generează text'}</button></div>)}</div></>}
+  const byId=Object.fromEntries(groups.map(g=>[g.id,g]))
+  const todo=drafts.filter(d=>['pending_approval','approved','draft'].includes(d.status))
+  const lastPosted=id=>{const d=drafts.find(x=>x.group_id===id&&x.status==='posted');return d?.posted_at?new Date(d.posted_at).toLocaleDateString('ro-RO',{day:'numeric',month:'short'}):null}
+  const postedCount=id=>drafts.filter(x=>x.group_id===id&&x.status==='posted').length
+  const add=async()=>{if(!name.trim()){onNotice('Scrie numele grupului');return}if(link.trim()&&!/^https:\/\/(www\.|m\.)?facebook\.com\/groups\//.test(link.trim())){onNotice('Linkul trebuie să fie de forma https://facebook.com/groups/…');return}setBusy('add');try{await createGroupCandidate({owner_id:user.id,external_group_id:`manual-${Date.now()}`,group_name:name.trim(),group_url:link.trim()||null,status:'shortlisted',language:'ro',category:'manual'});setName('');setLink('');await load();onNotice('Grupul a fost adăugat în rotație')}catch(e){onNotice(`Salvarea a eșuat: ${e.message}`)}finally{setBusy('')}}
+  const done=async d=>{try{await updateGroupDraft(d.id,{status:'posted',posted_at:new Date().toISOString()});await load();onNotice('Marcat ca postat')}catch(e){onNotice(e.message)}}
+  const skip=async d=>{try{await updateGroupDraft(d.id,{status:'rejected'});await load()}catch(e){onNotice(e.message)}}
+  const toggleGroup=async g=>{try{await updateGroupCandidate(g.id,{status:g.status==='excluded'?'shortlisted':'excluded'});await load()}catch(e){onNotice(e.message)}}
+  const active=groups.filter(g=>g.status!=='excluded').length
+  return <><PageTitle eyebrow="GRUPURI FACEBOOK" title="Grupuri Facebook" desc="5 postări pe zi în grupuri, pregătite automat. Tu doar le postezi."/>
+  <div className="group-note">♢ <span>Meta nu permite postarea automată în grupuri: contul ar risca blocarea. Platforma pregătește textul și media, tu postezi manual (~1 minut pe grup).</span></div>
+  <section className="card queue-card"><CardHead title={`De postat azi (${todo.length})`}/>
+    {!todo.length&&<p className="muted">Nimic de postat acum. Postările pentru grupuri apar aici în fiecare dimineață.</p>}
+    <div className="queue">{todo.map(d=><GroupDraftCard key={d.id} draft={d} group={byId[d.group_id]} media={media[d.media_id]} onDone={done} onSkip={skip} onNotice={onNotice}/>)}</div>
+  </section>
+  <section className="card" style={{marginBottom:16}}><CardHead title={`Grupurile tale (${active} în rotație)`}/>
+    <p className="muted">Recomandat: cel puțin 25–35 de grupuri, ca fiecare să primească o postare cel mult o dată pe săptămână. Verifică regulile fiecărui grup (unele permit reclame doar în anumite zile).</p>
+    <div className="form-row"><label>Numele grupului<input value={name} onChange={e=>setName(e.target.value)} placeholder="ex. Mămici din Brașov"/></label><label>Link grup<input value={link} onChange={e=>setLink(e.target.value)} placeholder="https://facebook.com/groups/…"/></label></div>
+    <button className="primary" style={{marginTop:12}} disabled={busy==='add'} onClick={add}>＋ Adaugă grupul</button>
+    <div className="groups-list" style={{marginTop:18}}>{!groups.length&&<p className="muted">Nu ai adăugat încă niciun grup.</p>}{groups.map(g=><div className={`group-row ${g.status==='excluded'?'paused':''}`} key={g.id}><div className="group-avatar">{g.group_name.charAt(0)}</div><div className="group-main"><b>{g.group_name}</b><span>{postedCount(g.id)} postări{lastPosted(g.id)?` · ultima pe ${lastPosted(g.id)}`:''}{g.group_url?<> · <a className="text-btn" href={g.group_url} target="_blank" rel="noreferrer">deschide</a></>:''}</span></div><button className="outline small" onClick={()=>toggleGroup(g)}>{g.status==='excluded'?'Reia':'Pauză'}</button></div>)}</div>
+  </section></>}
 function Analytics(){
   const [items,setItems]=useState([])
   useEffect(()=>{listPosts().then(setItems).catch(()=>setItems([]))},[])
@@ -268,7 +304,7 @@ function Automation({user,onNotice}){
   const [ig,setIg]=useState(true),[fb,setFb]=useState(true),[yt,setYt]=useState(true),[tt,setTt]=useState(true),[approval,setApproval]=useState(true),[groupCount,setGroupCount]=useState(5),[groupEnabled,setGroupEnabled]=useState(true)
   const [igSlots,setIgSlots]=useState(['12:30','19:30']),[fbSlots,setFbSlots]=useState(['12:30','19:30']),[ytSlots,setYtSlots]=useState(['12:30','19:30']),[ttSlots,setTtSlots]=useState(['12:30','19:30'])
   const [media,setMedia]=useState([]),[busy,setBusy]=useState(false)
-  useEffect(()=>{if(user) listMedia().then(setMedia).catch(error=>onNotice(`Media nu s-a putut încărca: ${error.message}`))},[user])
+  useEffect(()=>{if(user) listMedia().then(all=>setMedia(all.filter(m=>!m.mime_type?.startsWith('image/')))).catch(error=>onNotice(`Media nu s-a putut încărca: ${error.message}`))},[user])
   useEffect(()=>{if(!user)return;listPublishingSchedules().then(rows=>{const map={instagram:[setIg,setIgSlots],facebook:[setFb,setFbSlots],youtube:[setYt,setYtSlots],tiktok:[setTt,setTtSlots]};rows.forEach(row=>{const pair=map[row.platform];if(!pair)return;pair[0](row.enabled);if(Array.isArray(row.slots)&&row.slots.length===2)pair[1](row.slots)});const first=rows[0];if(first)setApproval(first.require_approval)}).catch(()=>{})},[user])
   const save=async()=>{if(!user){onNotice('Setările sunt în mod demo');return}try{await Promise.all([
     savePublishingSchedule({owner_id:user.id,platform:'instagram',posts_per_day:2,slots:igSlots,enabled:ig,require_approval:approval}),
