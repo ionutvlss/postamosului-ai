@@ -70,6 +70,11 @@ Alternativ, dacă sunt credite OpusClip: AI Producer (`start_project_from_attach
 - Dacă ingest-ul răspunde 409 („Automatizarea zilnică este oprită”), Ioan a apăsat Stop între timp: nu mai trimite nimic.
 - Raport scurt pentru Ioan: cele 2 hook-uri, ora la care sunt programate, costul (vocea + avatarul) și soldul rămas.
 
+## 6b. Nu repeta creativele
+Citește `posted_creatives` din `scripts.json` înainte să alegi. Afișele au mereu un titlu nou (niciodată unul din listă), iar o scenă
+nu se folosește două zile la rând; când toate scenele din `media/scene/` au fost folosite în ultima săptămână, generează una nouă
+(Seedream, cu avatarul ca referință, ~0,03 $). Tot ce publici adaugi în `posted_creatives` (dată, tip, script/titlu, scenă).
+
 ## 7. Grupurile de Facebook (5 postări pe zi, postate manual de Ioan)
 **Întâi campaniile:** dacă un fișier din `tools/clips/campaigns/` are `groups["AAAA-LL-ZZ"]` pentru azi (fără `"done": true`),
 folosește exact acele texte și media (`video_url` = câmpul `media`, `platforms: []`, `ingest_id: "AAAA-LL-ZZ-campanie-grupuri"`,

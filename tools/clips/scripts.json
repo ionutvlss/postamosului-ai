@@ -1,5 +1,5 @@
 {
- "_note": "Banca de reclame cu Moșul (10-15 s). Fiecare zi folosește 2 scripturi nefolosite, valabile la data respectivă. 'tts' merge la ElevenLabs (voce Bill), 'lines' sunt subtitrările. Publicul: PĂRINȚII, niciodată copiii. Hook-urile și end_title folosesc *accent* (italic auriu) și | (rând nou). Captions: ton editorial, fără emoji în exces.",
+ "_note": "Banca de reclame cu Moșul (10-15 s). Fiecare zi folosește 2 scripturi nefolosite, valabile la data respectivă. 'tts' merge la ElevenLabs (voce Bill), 'lines' sunt subtitrările. Publicul: PĂRINȚII, niciodată copiii. Hook-urile și end_title folosesc *accent* (italic auriu) și | (rând nou). Captions: ton editorial, fără emoji în exces. posted_creatives = ce s-a publicat deja: nu repeta un titlu de afiș, un script sau aceeași scenă două zile la rând.",
  "defaults": {
   "hashtags": [
    "#PostaMosului",
@@ -63,7 +63,8 @@
    "title": "Ce face un copil când Moșul îl strigă pe nume",
    "caption": "Momentul în care își aude numele spus de Moș Crăciun merită filmat.\n\nUn videoclip făcut doar pentru copilul vostru, cu detaliile pe care numai voi le știți.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
    "kicker": "Reacția lui",
-   "end_title": "Filmați-i|*reacția.*"
+   "end_title": "Filmați-i|*reacția.*",
+   "used": "2026-11-20"
   },
   {
    "id": "stiu-ce-a-reusit",
@@ -513,6 +514,36 @@
    "caption": "Scrieți numele copilului pe postamosului.ro și ascultați gratuit cum îl rostește Moș Crăciun.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
    "kicker": "Încearcă gratuit",
    "end_title": "Ascultă|*gratuit.*"
+  }
+ ],
+ "posted_creatives": [
+  {
+   "date": "2026-11-20",
+   "kind": "clip",
+   "script": "parinti-o-secunda",
+   "style": "editorial",
+   "note": "reclama premium, postată manual + test Meta/TikTok"
+  },
+  {
+   "date": "2026-11-20",
+   "kind": "clip",
+   "script": "fata-copilului",
+   "style": "serif",
+   "note": "postată manual"
+  },
+  {
+   "date": "2026-11-20",
+   "kind": "poster",
+   "template": "editorial",
+   "scene": "scene/sanie-tableta.png",
+   "title": "Un mesaj de la Moș Crăciun,|*cu numele lui*"
+  },
+  {
+   "date": "2026-11-20",
+   "kind": "poster",
+   "template": "invitation",
+   "scene": "scene/atelier-scrisoare.png",
+   "title": "Moșul i-a citit scrisoarea|și îi răspunde *pe nume*"
   }
  ]
 }
