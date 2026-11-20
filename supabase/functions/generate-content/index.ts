@@ -1,4 +1,4 @@
-import { aiJson, corsHeaders, HttpError, json, requireAdmin } from '../_shared/common.ts'
+import { adminClient, aiJson, corsHeaders, HttpError, json, requireAdmin } from '../_shared/common.ts'
 
 const fallbackContent = (prompt: string, platform: string, tone: string, variation = 0) => {
   const cleanPrompt = prompt.replace(/\s+/g, ' ').trim()
@@ -25,14 +25,16 @@ Deno.serve(async (request) => {
   try {
     if (request.method !== 'POST') throw new HttpError(405, 'Method not allowed')
     // Întâi verificăm administratorul: nimeni altcineva nu consumă din cheile AI.
-    await requireAdmin(request)
+    const ownerId = await requireAdmin(request)
+    const { data: settings } = await adminClient().from('automation_settings').select('brand_voice').eq('owner_id', ownerId).maybeSingle()
+    const voice = String(settings?.brand_voice || '').slice(0, 300)
     const input = await request.json().catch(() => ({}))
     const prompt = String(input.prompt || '').trim().slice(0, 2000)
     const platform = String(input.platform || 'instagram_reel').slice(0, 40)
     const tone = String(input.tone || 'cald și inspirațional').slice(0, 80)
     const variation = Number(input.variation || Date.now())
     if (!prompt) throw new HttpError(400, 'Promptul este obligatoriu')
-    const instruction = `Ești copywriter-ul brandului românesc Poșta Moșului. Generează conținut pentru ${platform}. Ton: ${tone}. Brief: ${prompt}. Variația creativă este ${variation}. Răspunde exclusiv JSON valid cu cheile title, body și hashtags. hashtags trebuie să fie un array de 4-8 hashtag-uri fără explicații. Textul trebuie să fie natural, elegant, cald și potrivit pentru părinți, fără emoji în exces.`
+    const instruction = `Ești copywriter-ul brandului românesc Poșta Moșului. Generează conținut pentru ${platform}. Ton: ${tone}. Brief: ${prompt}. Variația creativă este ${variation}. Răspunde exclusiv JSON valid cu cheile title, body și hashtags. hashtags trebuie să fie un array de 4-8 hashtag-uri fără explicații. Textul trebuie să fie natural, elegant, cald și potrivit pentru părinți, fără emoji în exces.${voice ? ` Vocea brandului: ${voice}.` : ''}`
     const result = await aiJson(instruction, 0.85)
     if (!result) return json(fallbackContent(prompt, platform, tone, variation))
     const { _model, ...content } = result

@@ -125,3 +125,6 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold-d)!
 .auth-card label{text-align:left;font-size:11px;color:var(--muted);letter-spacing:.4px}
 .auth-card form{position:relative;z-index:1}
 .auth-error{background:#2e1719;border-color:#6a2e30;color:#e7998f;border-radius:10px;font-size:12px}
+.pub-chart{height:220px;display:flex;align-items:flex-end;gap:8px;padding:10px 4px 0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 54px,#2a221d 55px)}.pub-col{flex:1;height:100%;display:flex;align-items:flex-end}.pub-stack{width:100%;min-height:2px;display:flex;flex-direction:column-reverse;border-radius:4px 4px 0 0;overflow:hidden;background:#2a221d}.pub-stack i{display:block;min-height:3px}.pub-stack i.facebook{background:#7d9bd6}.pub-stack i.instagram{background:#d98a92}.pub-stack i.youtube{background:#e0786c}.pub-stack i.tiktok{background:#8fd3d0}
+.settings-form textarea{min-height:110px;width:100%;padding:12px}
+.settings-form h2{font-family:var(--serif);font-weight:500;font-size:24px;color:var(--ivory)}
