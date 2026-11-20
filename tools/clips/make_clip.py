@@ -112,15 +112,22 @@ def build_ass(spec, words, total):
         "Style: Karaoke,Montserrat ExtraBold,96,&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,7,3,2,60,60,560,1",
         f"Style: Box,Montserrat ExtraBold,84,&H00FFFFFF,&H00FFFFFF,{RED_BOX},{RED_BOX},-1,0,0,0,100,100,0,0,3,18,0,2,80,80,600,1",
         "Style: Clean,Montserrat ExtraBold,86,&H00FFFFFF,&H00FFFFFF,&H00000000,&H96000000,-1,0,0,0,100,100,0,0,1,6,6,2,80,80,460,1",
-        "Style: Hook,Montserrat ExtraBold,78,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00101010,-1,0,0,0,100,100,0,0,3,26,0,8,70,70,190,1",
+        "Style: Hook,Montserrat ExtraBold,76,&H00FFFFFF,&H00FFFFFF,&H002E10C8,&H002E10C8,-1,0,0,0,100,100,0,0,3,26,0,8,70,70,200,1",
         "Style: Cta,Montserrat ExtraBold,70,&H00172030,&H00172030,&H0069C9F3,&H0069C9F3,-1,0,0,0,100,100,0,0,3,24,0,8,70,70,190,1",
+        "Style: EndBig,Playfair Display Black,104,&H00E6F3FA,&H00E6F3FA,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,4,5,60,60,0,1",
+        "Style: EndUrl,Montserrat ExtraBold,82,&H0069C9F3,&H0069C9F3,&H00000000,&H00000000,-1,0,0,0,100,100,1,0,1,0,3,5,60,60,0,1",
+        "Style: EndSub,Montserrat ExtraBold,46,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,3,5,60,60,0,1",
+        "Style: EndBtn,Montserrat ExtraBold,50,&H00FFFFFF,&H00FFFFFF,&H002E10C8,&H002E10C8,-1,0,0,0,100,100,0,0,3,30,0,5,60,60,0,1",
+        "Style: Brand,Montserrat ExtraBold,40,&H00E6F3FA,&H00E6F3FA,&H00000000,&H78000000,-1,0,0,0,100,100,2,0,3,14,0,7,48,48,70,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
     ev = []
+    end_start = max(0, total - min(2.4, total * 0.25)) if spec.get("cta", "POSTAMOSULUI.RO") else total
+    words = [dict(w, e=min(w["e"], end_start)) for w in words if w["s"] < end_start - 0.05]
     if style == "karaoke":
         for g in groups_of(words, 3):
             for i, cur in enumerate(g):
-                end = g[i + 1]["s"] if i + 1 < len(g) else cur["e"] + 0.15
+                end = g[i + 1]["s"] if i + 1 < len(g) else min(cur["e"] + 0.15, end_start)
                 parts = []
                 for j, w in enumerate(g):
                     word = esc(w["w"].upper())
@@ -145,10 +152,41 @@ def build_ass(spec, words, total):
         hook_end = min(2.8, total)
         ev.append(rf"Dialogue: 2,0:00:00.00,{ts(hook_end)},Hook,,0,0,0,,{{\fad(0,200)\t(0,180,\fscx106\fscy106)\t(180,360,\fscx100\fscy100)}}{esc(hook).replace(chr(92)+'n', chr(92)+'N')}")
     cta = spec.get("cta", "POSTAMOSULUI.RO")
+    end_len = min(2.4, total * 0.25)
+    end_start = max(0, total - end_len)
+    if spec.get("brand", True):
+        ev.append(rf"Dialogue: 0,{ts(min(2.8, total))},{ts(end_start)},Brand,,0,0,0,,{{\fad(200,150)}}POȘTA MOȘULUI")
     if cta:
         sub = spec.get("cta_sub", "de la 39 lei · gata în sub o oră")
-        ev.append(rf"Dialogue: 2,{ts(max(0, total - 2.0))},{ts(total)},Cta,,0,0,0,,{{\fad(150,0)}}{esc(cta)}\N{{\fs52}}{esc(sub)}")
+        kicker = spec.get("end_title", "Moșul îl așteaptă")
+        ev.append(rf"Dialogue: 3,{ts(end_start)},{ts(total)},EndBig,,0,0,0,,{{\pos(540,700)\fad(250,0)\t(0,300,\fscx104\fscy104)}}{esc(kicker)}")
+        ev.append(rf"Dialogue: 3,{ts(end_start + 0.15)},{ts(total)},EndUrl,,0,0,0,,{{\pos(540,860)\fad(250,0)}}{esc(cta)}")
+        ev.append(rf"Dialogue: 3,{ts(end_start + 0.3)},{ts(total)},EndSub,,0,0,0,,{{\pos(540,960)\fad(250,0)}}{esc(sub)}")
+        ev.append(rf"Dialogue: 3,{ts(end_start + 0.45)},{ts(total)},EndBtn,,0,0,0,,{{\pos(540,1110)\fad(200,0)\t(300,600,\fscx106\fscy106)\t(600,900,\fscx100\fscy100)}}Comandă acum  →")
     return "\n".join(head + ev) + "\n"
+
+
+def write_snow(path, total, fps=25, seed=11):
+    """Strat de fulgi (540x960, RGBA) ca secvență PNG comprimată într-un .mov cu alpha."""
+    import random
+    from PIL import Image, ImageDraw, ImageFilter
+    rnd = random.Random(seed)
+    w, h = 540, 960
+    flakes = [[rnd.uniform(0, w), rnd.uniform(-h, h), rnd.uniform(0.8, 2.6), rnd.uniform(18, 55), rnd.uniform(0, 6.28), rnd.randint(110, 230)] for _ in range(110)]
+    frames_dir = path + "_frames"
+    os.makedirs(frames_dir, exist_ok=True)
+    import math
+    n = int(total * fps) + 1
+    for i in range(n):
+        t = i / fps
+        im = Image.new("RGBA", (w, h), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+        for x, y0, r, speed, ph, a in flakes:
+            y = (y0 + speed * t) % (h + 40) - 20
+            xx = x + math.sin(t * 0.9 + ph) * 10
+            d.ellipse([xx - r, y - r, xx + r, y + r], fill=(255, 255, 255, a))
+        im.filter(ImageFilter.GaussianBlur(0.7)).save(f"{frames_dir}/{i:05d}.png", compress_level=1)
+    run(["ffmpeg", "-y", "-framerate", str(fps), "-i", f"{frames_dir}/%05d.png", "-c:v", "qtrle", path])
+    return path
 
 
 def main():
@@ -158,6 +196,7 @@ def main():
     ap.add_argument("--spec", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--no-zoom", action="store_true")
+    ap.add_argument("--no-snow", action="store_true")
     a = ap.parse_args()
     spec = json.load(open(a.spec, encoding="utf-8"))
     total = duration(a.video)
@@ -171,10 +210,23 @@ def main():
         ass = os.path.join(tmp, "subs.ass")
         open(ass, "w", encoding="utf-8").write(build_ass(spec, words, total))
         zoom = "" if a.no_zoom else f"scale=w='trunc({W}*(1.07-0.07*t/{total:.2f})/2)*2':h=-2:eval=frame,crop={W}:{H},"
-        vf = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},{zoom}ass={ass}:fontsdir={FONTS}"
-        run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", a.video, "-vf", vf,
+        end_start = max(0, total - min(2.4, total * 0.25))
+        grade = "eq=contrast=1.05:saturation=1.1:gamma=0.98,colorbalance=rs=0.03:gs=0.01:bs=-0.03,vignette=PI/5"
+        endfx = f"boxblur=18:2:enable='gte(t,{end_start:.2f})',eq=brightness=-0.12:enable='gte(t,{end_start:.2f})'"
+        inputs = ["-i", a.video]
+        chain = f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},{zoom}{grade},{endfx}[base]"
+        if not a.no_snow:
+            snow = write_snow(os.path.join(tmp, "snow.mov"), total)
+            inputs += ["-i", snow]
+            chain += f";[1:v]scale={W}:{H},format=rgba[snow];[base][snow]overlay=0:0:shortest=1[sn]"
+            last = "sn"
+        else:
+            last = "base"
+        chain += f";color=c=0xF3C969:s={W}x10:d={total:.2f}[bar];[{last}][bar]overlay=x='-W+W*t/{total:.2f}':y=H-10:shortest=1[pb]"
+        chain += f";[pb]ass={ass}:fontsdir={FONTS}[v]"
+        run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *inputs, "-filter_complex", chain, "-map", "[v]", "-map", "0:a",
              "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
-             "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", a.out])
+             "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-t", f"{total:.2f}", a.out])
     print(json.dumps({"out": a.out, "duration": round(total, 2), "words": len(words), "speech_segments": len(speech)}))
 
 
