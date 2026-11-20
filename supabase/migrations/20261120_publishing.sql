@@ -83,3 +83,10 @@ do $$ begin
   perform cron.unschedule('postamosului-publish-due') where exists (select 1 from cron.job where jobname = 'postamosului-publish-due');
   perform cron.schedule('postamosului-publish-due', '*/5 * * * *', 'select public.trigger_publisher()');
 end $$;
+
+-- Funcțiile de pe server (service_role) au nevoie de acces complet la tabelele aplicației.
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on sequences to service_role;
