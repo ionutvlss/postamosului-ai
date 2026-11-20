@@ -57,7 +57,7 @@ def kicker(d, y, text, color):
 
 
 def editorial(base, a):
-    img = vignette(grade(cover(base, W, H, 0.35)), 90).convert("RGBA")
+    img = vignette(grade(cover(base, W, H, a.focus if a.focus is not None else 0.35)), 90).convert("RGBA")
     img.alpha_composite(B.vertical_gradient(W, 260, [(0, (12, 7, 8, 150)), (1, (12, 7, 8, 0))]), (0, 0))
     img.alpha_composite(B.vertical_gradient(W, 760, [(0, (14, 7, 9, 0)), (0.45, (14, 7, 9, 170)), (1, (10, 5, 7, 245))]), (0, H - 760))
     d = ImageDraw.Draw(img)
@@ -87,7 +87,7 @@ def editorial(base, a):
 def invitation(base, a):
     split = 700
     img = Image.new("RGB", (W, H), (244, 236, 222))
-    photo = vignette(grade(cover(base, W, split + 140, 0.3)), 60)
+    photo = vignette(grade(cover(base, W, split + 140, a.focus if a.focus is not None else 0.3)), 60)
     img.paste(photo, (0, 0))
     img = img.convert("RGBA")
     img.alpha_composite(B.vertical_gradient(W, 220, [(0, (12, 7, 8, 140)), (1, (12, 7, 8, 0))]), (0, 0))
@@ -159,6 +159,7 @@ def main():
     ap.add_argument("--subtitle", default="Un videoclip doar pentru copilul tău,|despre anul lui și dorința de Crăciun.")
     ap.add_argument("--cta", default="POSTAMOSULUI.RO")
     ap.add_argument("--details", default="De la 39 lei  ·  Gata în sub o oră  ·  Fără cont")
+    ap.add_argument("--focus", type=float, help="încadrare pe verticală: 0 = sus, 1 = jos")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     template = {"cinematic": "editorial", "letter": "invitation", "classic": "invitation"}.get(a.template, a.template)

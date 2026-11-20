@@ -71,6 +71,10 @@ Alternativ, dacă sunt credite OpusClip: AI Producer (`start_project_from_attach
 - Raport scurt pentru Ioan: cele 2 hook-uri, ora la care sunt programate, costul (vocea + avatarul) și soldul rămas.
 
 ## 7. Grupurile de Facebook (5 postări pe zi, postate manual de Ioan)
+**Întâi campaniile:** dacă un fișier din `tools/clips/campaigns/` are `groups["AAAA-LL-ZZ"]` pentru azi (fără `"done": true`),
+folosește exact acele texte și media (`video_url` = câmpul `media`, `platforms: []`, `ingest_id: "AAAA-LL-ZZ-campanie-grupuri"`,
+`group_posts: {"texts": [...]}`), apoi marchează ziua cu `"done": true` și sari peste restul pasului 7.
+
 Alternanță: **zilele pare = clip** (unul dintre clipurile zilei), **zilele impare = imagine AI**.
 
 **Textele (5, toate diferite):** 50–110 cuvinte, ton de părinte pentru părinți, nu de reclamă. Încep cu ceva util
