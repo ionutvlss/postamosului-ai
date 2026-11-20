@@ -91,9 +91,12 @@ async function publishInstagram(post: Post): Promise<Result> {
     })
     container = created.id as string
   }
+  const started = String(post.metadata?.ig_started || new Date().toISOString())
   const status = await fetchJson(`${GRAPH}/${container}?${new URLSearchParams({ fields: 'status_code,status', access_token: token.access_token })}`)
   if (status.status_code === 'IN_PROGRESS') {
-    return { done: false, metadata: { ...post.metadata, ig_container: container } }
+    // Instagram procesează de obicei în câteva minute; după 45 de minute renunțăm, ca postarea să nu rămână blocată.
+    if (Date.now() - new Date(started).getTime() > 45 * 60_000) throw new Error('Instagram nu a terminat procesarea videoclipului în 45 de minute. Apasă „Reîncearcă”.')
+    return { done: false, metadata: { ...post.metadata, ig_container: container, ig_started: started } }
   }
   if (status.status_code !== 'FINISHED') throw new Error(`Instagram a respins videoclipul: ${status.status || status.status_code}`)
   const published = await fetchJson(`${GRAPH}/${igId}/media_publish`, {
@@ -202,13 +205,16 @@ async function process(post: Post) {
     await db().from('posts').update({
       status: 'published', published_at: new Date().toISOString(), external_post_id: result.externalId,
       external_url: result.url ?? null, last_error: result.note ?? null,
-      metadata: { ...post.metadata, ig_container: null }, updated_at: new Date().toISOString(),
+      metadata: { ...post.metadata, ig_container: null, ig_started: null }, updated_at: new Date().toISOString(),
     }).eq('id', post.id)
     return { id: post.id, status: 'published' }
   } catch (error) {
     const message = (error as Error).message.slice(0, 500)
     console.error('publish', post.platform, post.id, message)
-    await db().from('posts').update({ status: 'failed', last_error: message, updated_at: new Date().toISOString() }).eq('id', post.id)
+    await db().from('posts').update({
+      status: 'failed', last_error: message, updated_at: new Date().toISOString(),
+      metadata: { ...post.metadata, ig_container: null, ig_started: null },
+    }).eq('id', post.id)
     return { id: post.id, status: 'failed', error: message }
   }
 }

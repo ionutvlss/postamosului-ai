@@ -57,7 +57,9 @@ export class HttpError extends Error {
 export async function fetchJson(url: string, init?: RequestInit) {
   const response = await fetch(url, init)
   const payload = await response.json().catch(() => ({}))
-  if (!response.ok || payload?.error) {
+  // TikTok trimite și la succes `error: { code: "ok" }`; doar alte coduri înseamnă eroare.
+  const apiError = payload?.error && !(typeof payload.error === 'object' && payload.error.code === 'ok')
+  if (!response.ok || apiError) {
     const message = payload?.error?.message || payload?.error_description || payload?.error?.code || payload?.message ||
       (typeof payload?.error === 'string' ? payload.error : '') || `HTTP ${response.status}`
     throw new Error(String(message))
@@ -104,4 +106,43 @@ export async function saveAccount(input: {
     updated_at: new Date().toISOString(),
   })
   if (tokenError) throw tokenError
+}
+
+/**
+ * Cere un răspuns JSON de la AI, cu rezerve: modelul din GEMINI_MODEL (dacă e setat), gemini-3.5-flash,
+ * gemini-2.5-flash, apoi OpenAI (OPENAI_MODEL sau gpt-4.1-mini). Întoarce null dacă niciunul nu răspunde valid.
+ */
+export async function aiJson(prompt: string, temperature = 0.7): Promise<Record<string, unknown> | null> {
+  const geminiKey = Deno.env.get('GEMINI_API_KEY')
+  if (geminiKey) {
+    const models = [Deno.env.get('GEMINI_MODEL'), 'gemini-3.5-flash', 'gemini-2.5-flash'].filter(Boolean) as string[]
+    for (const model of [...new Set(models)]) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature } }),
+        })
+        const payload = await res.json().catch(() => ({}))
+        const text = payload?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || ''
+        if (res.ok && text) return { ...JSON.parse(text.replace(/^```json\s*|\s*```$/g, '').trim()), _model: model }
+        console.error('aiJson gemini', model, res.status, payload?.error?.message || '')
+      } catch (e) { console.error('aiJson gemini', model, (e as Error).message) }
+    }
+  }
+  const openAiKey = Deno.env.get('OPENAI_API_KEY')
+  if (openAiKey) {
+    const model = Deno.env.get('OPENAI_MODEL') || 'gpt-4.1-mini'
+    try {
+      const res = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openAiKey}` },
+        body: JSON.stringify({ model, input: prompt, temperature, text: { format: { type: 'json_object' } } }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      const text = payload.output_text || payload.output?.flatMap((i: { content?: unknown[] }) => i.content || [])
+        .find((i: { type?: string }) => i.type === 'output_text')?.text || ''
+      if (res.ok && text) return { ...JSON.parse(String(text).replace(/^```json\s*|\s*```$/g, '').trim()), _model: model }
+      console.error('aiJson openai', res.status, payload?.error?.message || '')
+    } catch (e) { console.error('aiJson openai', (e as Error).message) }
+  }
+  return null
 }

@@ -1,10 +1,4 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+import { aiJson, corsHeaders, HttpError, json, requireAdmin } from '../_shared/common.ts'
 
 const fallbackContent = (prompt: string, platform: string, tone: string, variation = 0) => {
   const cleanPrompt = prompt.replace(/\s+/g, ' ').trim()
@@ -28,66 +22,23 @@ const fallbackContent = (prompt: string, platform: string, tone: string, variati
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
-
-  const authorization = request.headers.get('Authorization')
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
-  let supabaseServiceRoleKey = Deno.env.get('POSTAMOSULUI_SUPABASE_ADMIN_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (!supabaseServiceRoleKey) {
-    try {
-      const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}')
-      supabaseServiceRoleKey = secretKeys.default || Object.values(secretKeys)[0] as string | undefined
-    } catch { /* fallback to the user's JWT below */ }
-  }
-  const openAiKey = Deno.env.get('OPENAI_API_KEY')
-  const geminiKey = Deno.env.get('GEMINI_API_KEY')
-  if (!authorization || !supabaseUrl || !supabaseAnonKey) return json({ error: 'Missing Supabase configuration' }, 500)
-  const input = await request.json().catch(() => ({}))
-  const prompt = String(input.prompt || '').trim()
-  const platform = String(input.platform || 'instagram_reel')
-  const tone = String(input.tone || 'cald și inspirațional')
-  const variation = Number(input.variation || Date.now())
-  if (!prompt) return json({ error: 'Promptul este obligatoriu' }, 400)
-  const instruction = `Ești copywriter-ul brandului românesc PostaMoșului. Generează conținut pentru ${platform}. Ton: ${tone}. Brief: ${prompt}. Variația creativă este ${variation}. Răspunde exclusiv JSON valid cu cheile title, body și hashtags. hashtags trebuie să fie un array de 4-8 hashtag-uri fără explicații. Textul trebuie să fie natural, cald și potrivit pentru părinți.`
-  if (geminiKey) {
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', { method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey}, body:JSON.stringify({contents:[{parts:[{text:instruction}]}],generationConfig:{responseMimeType:'application/json',temperature:0.85}}) })
-    const geminiPayload = await geminiResponse.json().catch(() => ({}))
-    const geminiText = geminiPayload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || ''
-    if (geminiResponse.ok && geminiText) { try { return json({ ...JSON.parse(geminiText), platform, model:'gemini-2.5-flash' }) } catch { /* fallback below */ } }
-  }
-  if (!openAiKey) return json(fallbackContent(prompt, platform, tone, variation))
-
-  const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: supabaseAnonKey, Authorization: authorization } })
-  if (!userResponse.ok) return json({ error: 'Sesiunea administratorului este invalidă' }, 401)
-  const user = await userResponse.json()
-  const profileHeaders = supabaseServiceRoleKey
-    ? { apikey: supabaseServiceRoleKey, Authorization: `Bearer ${supabaseServiceRoleKey}` }
-    : { apikey: supabaseAnonKey, Authorization: authorization }
-  const profileResponse = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&role=eq.admin&select=id&limit=1`, { headers: profileHeaders })
-  const profileRows = await profileResponse.json().catch(() => [])
-  if (!profileResponse.ok) {
-    const details = typeof profileRows?.message === 'string' ? `: ${profileRows.message}` : ''
-    return json({ error: `Verificarea profilului a eșuat (${profileResponse.status})${details}` }, 500)
-  }
-  if (profileRows.length === 0) return json({ error: `Profil admin negăsit pentru utilizatorul autentificat (${user.id})` }, 403)
-
-  const model = Deno.env.get('OPENAI_MODEL') || 'gpt-4.1-mini'
-  const aiResponse = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openAiKey}` },
-    body: JSON.stringify({
-      model,
-      input: instruction,
-    }),
-  })
-  const aiPayload = await aiResponse.json()
-  if (!aiResponse.ok) return json(fallbackContent(prompt, platform, tone, variation))
-  const rawText = aiPayload.output_text || aiPayload.output?.flatMap((item: any) => item.content || []).find((item: any) => item.type === 'output_text')?.text || ''
   try {
-    const parsed = JSON.parse(rawText.replace(/^```json\s*|\s*```$/g, '').trim())
-    return json({ ...parsed, platform, model })
-  } catch {
-    return json({ title: 'Conținut generat', body: rawText, hashtags: [], platform, model })
+    if (request.method !== 'POST') throw new HttpError(405, 'Method not allowed')
+    // Întâi verificăm administratorul: nimeni altcineva nu consumă din cheile AI.
+    await requireAdmin(request)
+    const input = await request.json().catch(() => ({}))
+    const prompt = String(input.prompt || '').trim().slice(0, 2000)
+    const platform = String(input.platform || 'instagram_reel').slice(0, 40)
+    const tone = String(input.tone || 'cald și inspirațional').slice(0, 80)
+    const variation = Number(input.variation || Date.now())
+    if (!prompt) throw new HttpError(400, 'Promptul este obligatoriu')
+    const instruction = `Ești copywriter-ul brandului românesc Poșta Moșului. Generează conținut pentru ${platform}. Ton: ${tone}. Brief: ${prompt}. Variația creativă este ${variation}. Răspunde exclusiv JSON valid cu cheile title, body și hashtags. hashtags trebuie să fie un array de 4-8 hashtag-uri fără explicații. Textul trebuie să fie natural, elegant, cald și potrivit pentru părinți, fără emoji în exces.`
+    const result = await aiJson(instruction, 0.85)
+    if (!result) return json(fallbackContent(prompt, platform, tone, variation))
+    const { _model, ...content } = result
+    return json({ ...content, platform, model: _model })
+  } catch (error) {
+    const status = error instanceof HttpError ? error.status : 500
+    return json({ error: (error as Error).message }, status)
   }
 })

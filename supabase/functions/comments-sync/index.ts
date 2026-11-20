@@ -1,6 +1,6 @@
 // Comentarii: le aduce de pe Facebook, Instagram și YouTube (la 10 minute, prin cron), scrie un răspuns cu AI
 // și, după modul ales în Setări, îl trimite singur sau îl lasă la aprobare. Tot aici se trimit răspunsurile aprobate.
-import { adminClient, corsHeaders, env, fetchJson, GRAPH, HttpError, json, requireAdmin } from '../_shared/common.ts'
+import { adminClient, aiJson, corsHeaders, env, fetchJson, GRAPH, HttpError, json, requireAdmin } from '../_shared/common.ts'
 
 type Platform = 'facebook' | 'instagram' | 'youtube'
 type Account = { id: string; owner_id: string; platform: Platform; external_account_id: string; account_name: string; metadata: Record<string, any> }
@@ -25,19 +25,9 @@ Comentariu pe ${platform}, de la ${author || 'un utilizator'}:
 
 Răspunde DOAR cu JSON: {"sentiment":"positive|question|negative|spam|other","safe_to_auto":true|false,"reply":"..."}
 safe_to_auto = true doar pentru laude simple sau întrebări la care faptele de mai sus răspund complet. Spam/insulte: reply gol.`
-  const key = env('GEMINI_API_KEY')
-  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.6 } }),
-  })
-  const payload = await res.json().catch(() => ({}))
-  const out = payload?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || ''
-  try {
-    const parsed = JSON.parse(out)
-    return { sentiment: String(parsed.sentiment || 'other'), safe: parsed.safe_to_auto === true, reply: String(parsed.reply || '').slice(0, 900) }
-  } catch {
-    return { sentiment: 'other', safe: false, reply: '' }
-  }
+  const parsed = await aiJson(prompt, 0.6)
+  if (!parsed) return { sentiment: 'other', safe: false, reply: '' }
+  return { sentiment: String(parsed.sentiment || 'other'), safe: parsed.safe_to_auto === true, reply: String(parsed.reply || '').slice(0, 900) }
 }
 
 async function token(acc: Account) {
