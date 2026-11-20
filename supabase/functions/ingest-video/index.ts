@@ -53,29 +53,38 @@ async function nextFreeSlot(ownerId: string, platform: Platform, from: Date, pre
   throw new Error(`Nu am găsit un slot liber pentru ${platform} în următoarele 45 de zile`)
 }
 
-/** Alege grupurile la rând (cele mai de mult nefolosite, nu mai des de o dată la 6 zile) și le pune textele. */
-async function createGroupDrafts(ownerId: string, mediaId: string, texts: string[], ingestId: string | null) {
+/** Alege grupurile la rând pentru ziua `target`: niciun grup cu altă postare la mai puțin de 6 zile (înainte sau după),
+ *  maximum 5 postări de grup pe zi, cele mai de mult nefolosite primele. */
+async function createGroupDrafts(ownerId: string, mediaId: string, texts: string[], ingestId: string | null, target: Date) {
   const db = adminClient()
   const { data: groups } = await db.from('group_candidates').select('id, group_name')
     .eq('owner_id', ownerId).eq('status', 'shortlisted').order('created_at', { ascending: true })
   if (!groups?.length) return []
-  const since = new Date(Date.now() - 6 * 86400000).toISOString()
-  const { data: recent } = await db.from('group_outreach_drafts').select('group_id, created_at, status')
-    .eq('owner_id', ownerId).neq('status', 'rejected').order('created_at', { ascending: false }).limit(500)
-  const last = new Map<string, string>()
-  for (const row of recent || []) if (!last.has(row.group_id)) last.set(row.group_id, row.created_at)
+  const { data: existing } = await db.from('group_outreach_drafts').select('group_id, scheduled_for, created_at, status')
+    .eq('owner_id', ownerId).neq('status', 'rejected').order('created_at', { ascending: false }).limit(1000)
+  const day = bucharestDay(target)
+  const sameDay = (existing || []).filter(r => bucharestDay(new Date(r.scheduled_for || r.created_at)) === day).length
+  const room = Math.max(0, 5 - sameDay)
+  if (!room) return []
+  const SIX = 6 * 86400000
+  const dates = new Map<string, number[]>()
+  for (const r of existing || []) {
+    const t = new Date(r.scheduled_for || r.created_at).getTime()
+    dates.set(r.group_id, [...(dates.get(r.group_id) || []), t])
+  }
+  const lastBefore = (id: string) => Math.max(0, ...(dates.get(id) || []).filter(t => t <= target.getTime()))
   const ranked = groups
-    .filter(g => !last.has(g.id) || last.get(g.id)! < since)
-    .sort((a, b) => (last.get(a.id) || '').localeCompare(last.get(b.id) || ''))
-    .slice(0, texts.length)
+    .filter(g => !(dates.get(g.id) || []).some(t => Math.abs(t - target.getTime()) < SIX))
+    .sort((a, b) => lastBefore(a.id) - lastBefore(b.id))
+    .slice(0, Math.min(texts.length, room))
   const created = []
   for (const [i, group] of ranked.entries()) {
     const { data, error } = await db.from('group_outreach_drafts').insert({
       owner_id: ownerId, group_id: group.id, media_id: mediaId, body: texts[i].slice(0, 5000),
-      status: 'pending_approval', scheduled_for: new Date().toISOString(), ai_model: ingestId ? `claude:${ingestId}` : 'claude',
+      status: 'pending_approval', scheduled_for: target.toISOString(), ai_model: ingestId ? `claude:${ingestId}` : 'claude',
     }).select('id').single()
     if (error) throw error
-    created.push({ id: data.id, group: group.group_name })
+    created.push({ id: data.id, group: group.group_name, day })
   }
   return created
 }
@@ -206,7 +215,9 @@ Deno.serve(async (request) => {
       if (error) throw error
       created.push(post)
     }
-    const groupDrafts = groupTexts.length ? await createGroupDrafts(owner.id, asset.id, groupTexts, ingestId) : []
+    const groupDay = input.group_posts?.scheduled_for ? new Date(String(input.group_posts.scheduled_for)) : new Date()
+    if (Number.isNaN(groupDay.getTime())) throw new HttpError(400, 'group_posts.scheduled_for invalid')
+    const groupDrafts = groupTexts.length ? await createGroupDrafts(owner.id, asset.id, groupTexts, ingestId, groupDay) : []
     return json({ media_id: asset.id, posts: created, group_drafts: groupDrafts })
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500

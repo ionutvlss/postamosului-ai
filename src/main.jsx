@@ -268,7 +268,10 @@ function Groups({user,onNotice}){
   const load=()=>Promise.all([listGroupCandidates(),listGroupDrafts(),listMedia()]).then(([g,d,m])=>{setGroups(g);setDrafts(d);setMedia(Object.fromEntries(m.map(x=>[x.id,x])))}).catch(e=>onNotice(`Nu am putut încărca grupurile: ${e.message}`))
   useEffect(()=>{if(user)load()},[user])
   const byId=Object.fromEntries(groups.map(g=>[g.id,g]))
-  const todo=drafts.filter(d=>['pending_approval','approved','draft'].includes(d.status))
+  const endOfToday=new Date();endOfToday.setHours(23,59,59,999)
+  const open=drafts.filter(d=>['pending_approval','approved','draft'].includes(d.status))
+  const todo=open.filter(d=>!d.scheduled_for||new Date(d.scheduled_for)<=endOfToday)
+  const upcoming=open.filter(d=>d.scheduled_for&&new Date(d.scheduled_for)>endOfToday).sort((a,b)=>a.scheduled_for.localeCompare(b.scheduled_for))
   const lastPosted=id=>{const d=drafts.find(x=>x.group_id===id&&x.status==='posted');return d?.posted_at?new Date(d.posted_at).toLocaleDateString('ro-RO',{day:'numeric',month:'short'}):null}
   const postedCount=id=>drafts.filter(x=>x.group_id===id&&x.status==='posted').length
   const add=async()=>{if(!name.trim()){onNotice('Scrie numele grupului');return}if(link.trim()&&!/^https:\/\/(www\.|m\.)?facebook\.com\/groups\//.test(link.trim())){onNotice('Linkul trebuie să fie de forma https://facebook.com/groups/…');return}setBusy('add');try{await createGroupCandidate({owner_id:user.id,external_group_id:`manual-${Date.now()}`,group_name:name.trim(),group_url:link.trim()||null,status:'shortlisted',language:'ro',category:'manual'});setName('');setLink('');await load();onNotice('Grupul a fost adăugat în rotație')}catch(e){onNotice(`Salvarea a eșuat: ${e.message}`)}finally{setBusy('')}}
@@ -286,6 +289,10 @@ function Groups({user,onNotice}){
     {!todo.length&&<p className="muted">Nimic de postat acum. Postările pentru grupuri apar aici în fiecare dimineață.</p>}
     <div className="queue">{todo.map(d=><GroupDraftCard key={d.id} draft={d} group={byId[d.group_id]} media={media[d.media_id]} onDone={done} onSkip={skip} onNotice={onNotice}/>)}</div>
   </section>
+  {upcoming.length>0&&<section className="card" style={{marginBottom:16}}><CardHead title={`Programate (${upcoming.length})`}/>
+    <p className="muted">Apar la „De postat azi” în ziua lor.</p>
+    <div className="groups-list">{upcoming.map(d=><div className="group-row" key={d.id}><div className="group-avatar">{(byId[d.group_id]?.group_name||'?').charAt(0)}</div><div className="group-main"><b>{byId[d.group_id]?.group_name||'Grup'}</b><span>{d.body.slice(0,110)}{d.body.length>110?'…':''}</span></div><span className="tag">{new Date(d.scheduled_for).toLocaleDateString('ro-RO',{weekday:'short',day:'numeric',month:'short'})}</span></div>)}</div>
+  </section>}
   {suggestions.length>0&&<section className="card" style={{marginBottom:16}}><CardHead title={`Sugestii găsite (${suggestions.length})`}/>
     <p className="muted">Grupuri găsite automat. Deschide-l, citește regulile, intră în grup și apoi apasă „Adaug”.</p>
     <div className="groups-list">{suggestions.sort((a,b)=>(b.relevance_score||0)-(a.relevance_score||0)).map(g=><div className="group-row" key={g.id}><div className="group-avatar">{g.group_name.charAt(0)}</div><div className="group-main"><b>{g.group_name}</b><span>{g.member_count?`${g.member_count.toLocaleString('ro-RO')} membri · `:''}{g.metadata?.privacy?`${g.metadata.privacy} · `:''}{g.metadata?.reason||g.category||''}</span></div>{g.relevance_score?<div className="relevance"><small>POTRIVIRE</small><b>{Math.round(g.relevance_score)}%</b></div>:null}<a className="outline small" href={g.group_url} target="_blank" rel="noreferrer">Deschide</a><button className="primary small" onClick={()=>accept(g)}>Adaug</button><button className="outline small danger" onClick={()=>decline(g)}>Nu</button></div>)}</div>
