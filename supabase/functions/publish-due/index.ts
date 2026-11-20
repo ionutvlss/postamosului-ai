@@ -193,6 +193,36 @@ async function publishTiktok(post: Post): Promise<Result> {
   return { done: true, externalId: init.data.publish_id, note: 'Trimis în inbox-ul TikTok: deschide aplicația și publică-l cu textul din platformă' }
 }
 
+// Starea încărcărilor TikTok (inbox): TikTok spune dacă a trimis notificarea, dacă s-a publicat sau de ce a eșuat.
+async function refreshTiktokStatus() {
+  const since = new Date(Date.now() - 48 * 3600_000).toISOString()
+  const { data: rows } = await db().from('posts').select('*').eq('platform', 'tiktok').eq('status', 'published')
+    .gte('published_at', since).not('external_post_id', 'is', null).limit(10)
+  const out = []
+  for (const post of (rows || []) as (Post & { external_post_id: string })[]) {
+    const last = post.metadata?.tiktok_status
+    if (last === 'PUBLISH_COMPLETE' || last === 'FAILED') continue
+    try {
+      const { account: acc, token } = await account(post)
+      const accessToken = await tiktokToken(acc, token)
+      const res = await fetchJson('https://open.tiktokapis.com/v2/post/publish/status/fetch/', {
+        method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({ publish_id: post.external_post_id }),
+      })
+      const status = String(res.data?.status || 'UNKNOWN'), reason = String(res.data?.fail_reason || '')
+      const note = status === 'SEND_TO_USER_INBOX' ? 'În inbox-ul TikTok: deschide notificarea din aplicație și publică-l'
+        : status === 'PUBLISH_COMPLETE' ? 'Publicat pe TikTok'
+        : status === 'FAILED' ? `TikTok a refuzat clipul: ${reason || 'motiv necunoscut'}`
+        : `TikTok procesează încă clipul (${status})`
+      await db().from('posts').update({ metadata: { ...post.metadata, tiktok_status: status, tiktok_fail_reason: reason || null }, last_error: note }).eq('id', post.id)
+      out.push({ id: post.id, status, reason })
+    } catch (e) {
+      out.push({ id: post.id, error: (e as Error).message.slice(0, 200) })
+    }
+  }
+  return out
+}
+
 const publishers = { facebook: publishFacebook, instagram: publishInstagram, youtube: publishYoutube, tiktok: publishTiktok }
 
 async function process(post: Post) {
@@ -263,7 +293,8 @@ Deno.serve(async (request) => {
         .eq('status', 'publishing').is('metadata->>ig_container', null).lt('updated_at', new Date(Date.now() - 30 * 60_000).toISOString())
     }
     for (const post of await claim(postId)) results.push(await process(post))
-    return json({ processed: results.length, results })
+    const tiktok = postId ? [] : await refreshTiktokStatus()
+    return json({ processed: results.length, results, tiktok })
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500
     return json({ error: (error as Error).message }, status)
