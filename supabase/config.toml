@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.publish-due]
 verify_jwt = false
+
+[functions.ingest-video]
+verify_jwt = false

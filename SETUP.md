@@ -71,3 +71,29 @@ Postarea directă publică necesită auditul TikTok; până atunci TikTok le-ar 
 4. **Calendar editorial** → „De aprobat” → **Publică acum** pe una dintre postări.
 
 Dacă ceva eșuează, motivul apare sub postare, iar butonul „Reîncearcă” o reia.
+
+## 6. Clipuri trimise automat (reclamele zilnice cu Moșul)
+
+Funcția `ingest-video` primește clipuri gata făcute și le pune în „De aprobat”, pe toate cele 4 platforme.
+
+1. Generează o valoare lungă și aleatorie (ex. din un generator de parole, 40+ caractere).
+2. Supabase → Edge Functions → Secrets → `INGEST_SECRET` = valoarea.
+3. n8n → Credentials → credențialul **„PostaMosului AI · ingest”** (Header Auth) → Value = aceeași valoare.
+
+Body acceptat (`POST /functions/v1/ingest-video`, header `x-ingest-secret`):
+
+```json
+{
+  "video_url": "https://…/clip.mp4",
+  "title": "Știu cum îl cheamă pe copilul tău",
+  "captions": { "default": "…", "tiktok": "…", "youtube": "…" },
+  "hashtags": ["#PostaMosului", "#MosCraciun"],
+  "platforms": ["tiktok", "facebook", "instagram", "youtube"],
+  "slot_index": 0,
+  "ingest_id": "2026-12-01-a",
+  "source": "claude-daily"
+}
+```
+
+Fără `scheduled_for`, fiecare postare primește următorul slot liber al platformei (din Automatizări; implicit 12:30 și 19:30).
+`slot_index` 0/1 alege primul sau al doilea slot al zilei. `ingest_id` previne dublurile.
