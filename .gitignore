@@ -7,3 +7,4 @@ dist/
 *.log
 .npmrc
 supabase/.temp/
+__pycache__/
