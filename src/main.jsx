@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
-import { listGroupDrafts, updateGroupDraft, updateGroupCandidate, deletePost, listPublishingSchedules, listSocialAccounts, publishNow, startConnect, createContentVariant, createGroupCandidate, createGroupOutreachDraft, createPost, deleteMedia, generateContent, getProfile, listAutomationSettings, listGroupCandidates, listMedia, listPosts, saveAutomationSettings, savePublishingSchedule, updatePost, updateProfile, uploadMedia } from './lib/api'
+import { listComments, updateComment, commentsAction, listGroupDrafts, updateGroupDraft, updateGroupCandidate, deletePost, listPublishingSchedules, listSocialAccounts, publishNow, startConnect, createContentVariant, createGroupCandidate, createGroupOutreachDraft, createPost, deleteMedia, generateContent, getProfile, listAutomationSettings, listGroupCandidates, listMedia, listPosts, saveAutomationSettings, savePublishingSchedule, updatePost, updateProfile, uploadMedia } from './lib/api'
 
-const icons = { grid:'⌘', social:'◎', media:'▣', studio:'✦', calendar:'▦', groups:'♧', analytics:'↗', settings:'⚙' }
+const icons = { grid:'⌘', social:'◎', media:'▣', studio:'✦', calendar:'▦', groups:'♧', comments:'✉', analytics:'↗', settings:'⚙' }
 const nav = [
   ['Dashboard','grid'], ['Conturi social','social'], ['Media library','media'], ['AI Content Studio','studio'],
-  ['Calendar editorial','calendar'], ['Automatizări','settings'], ['Grupuri Facebook','groups'], ['Analytics','analytics'], ['Setări','settings']
+  ['Calendar editorial','calendar'], ['Automatizări','settings'], ['Grupuri Facebook','groups'], ['Comentarii','comments'], ['Analytics','analytics'], ['Setări','settings']
 ]
 
 const PLATFORM = {
@@ -79,6 +79,7 @@ function App(){
     if(active==='Calendar editorial') return <Calendar posts={posts} onAdd={addPost} onNotice={showNotice}/>
     if(active==='Automatizări') return <Automation user={session?.user} onNotice={showNotice}/>
     if(active==='Grupuri Facebook') return <Groups user={session?.user} onNotice={showNotice}/>
+    if(active==='Comentarii') return <Comments user={session?.user} onNotice={showNotice}/>
     if(active==='Analytics') return <Analytics/>
     return <Settings user={session?.user} profile={profile} setProfile={setProfile} onNotice={showNotice}/>
   }
@@ -308,6 +309,43 @@ function Analytics(){
   const percent=n=>`${Math.round(n/total*100)}%`
   return <><PageTitle eyebrow="PERFORMANȚĂ" title="Analytics" desc="Indicatori calculați din postările și programările tale." action={<button className="outline" onClick={()=>window.location.reload()}>↻ Reîmprospătează</button>}/><div className="stats"><Stat label="Postări totale" value={items.length} change={`${published} publicate`} tone="green" note="din Supabase"/><Stat label="În aprobare" value={pending} change="necesită acțiune" tone="gold" note="înainte de publicare"/><Stat label="Programate" value={items.filter(post=>post.status==='scheduled').length} change="următoarele zile" tone="green" note="calendar editorial"/><Stat label="Videoclipuri" value={new Set(items.map(post=>post.media_id).filter(Boolean)).size} change="folosite" tone="gold" note="media asociată"/></div><div className="dashboard-grid"><section className="card activity"><CardHead title="Distribuție postări"/><div className="big-chart"><div className="line l1"></div><div className="line l2"></div><div className="line l3"></div></div><div className="chart-days"><span>Facebook {facebook}</span><span>Instagram {instagram}</span><span>YouTube {youtube}</span><span>TikTok {tiktok}</span></div></section><section className="card channels"><CardHead title="Canale active"/><Channel name="Instagram" value={percent(instagram)} color="ig"/><Channel name="Facebook" value={percent(facebook)} color="fb"/><Channel name="YouTube" value={percent(youtube)} color="yt"/><Channel name="TikTok" value={percent(tiktok)} color="tt"/></section></div></>}
 function Channel({name,value,color}){return <div className="channel"><span className={'platform '+color}>{name==='Instagram'?'◎':name==='Facebook'?'f':name==='TikTok'?'♪':'▶'}</span><b>{name}</b><strong>{value}</strong><div><i className={color} style={{width:value}}></i></div></div>}
+const SENTIMENT = { positive:['Pozitiv','green'], question:['Întrebare','gold'], negative:['Negativ','red'], spam:['Spam','muted'], other:['Altul','muted'] }
+const REPLY = { unreviewed:'De revizuit', approved:'Aprobat', sent:'Trimis', ignored:'Ignorat', failed:'Eșuat' }
+function CommentCard({c,onChange,onNotice}){
+  const [text,setText]=useState(c.reply_draft||''),[busy,setBusy]=useState('')
+  useEffect(()=>setText(c.reply_draft||''),[c.reply_draft])
+  const p=PLATFORM[c.platform]||{label:c.platform,color:'',icon:'•'}, s=SENTIMENT[c.sentiment]||SENTIMENT.other
+  const run=async(kind,fn)=>{setBusy(kind);try{await fn()}catch(e){onNotice(e.message)}finally{setBusy('')}}
+  const send=()=>run('send',async()=>{await commentsAction({action:'send',id:c.id,text});onChange({...c,reply_draft:text,reply_status:'sent',replied_at:new Date().toISOString()});onNotice('Răspuns trimis')})
+  const redraft=()=>run('ai',async()=>{const r=await commentsAction({action:'redraft',id:c.id});setText(r.reply||'');onChange({...c,reply_draft:r.reply})})
+  const ignore=()=>run('ignore',async()=>onChange(await updateComment(c.id,{reply_status:'ignored'})))
+  const done=c.reply_status==='sent'||c.reply_status==='ignored'
+  return <article className={`comment-card ${done?'done':''}`}>
+    <div className="comment-head"><span className={`plat ${p.color}`}>{p.icon}</span><b>{c.author_name||'Utilizator'}</b><span className={`chip ${s[1]}`}>{s[0]}</span><span className="muted small">{new Date(c.created_at).toLocaleString('ro-RO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span><span className={`chip status-${c.reply_status}`}>{REPLY[c.reply_status]||c.reply_status}{c.metadata?.auto?' · auto':''}</span></div>
+    <p className="comment-body">{c.comment_body}</p>
+    {c.sentiment==='negative'&&!done&&<div className="safety-note">Comentariu negativ — citește atent înainte să trimiți. AI-ul nu răspunde singur aici.</div>}
+    {done ? (c.reply_status==='sent'&&<p className="comment-reply">↳ {c.reply_draft}</p>) : <>
+      <textarea className="group-text" rows={3} value={text} onChange={e=>setText(e.target.value)} placeholder="Răspunsul tău…"/>
+      <div className="row-actions"><button className="primary" disabled={!!busy||!text.trim()} onClick={send}>{busy==='send'?'Se trimite…':'Trimite răspunsul'}</button><button className="outline" disabled={!!busy} onClick={redraft}>{busy==='ai'?'Scriu…':'✦ Alt răspuns AI'}</button><button className="ghost" disabled={!!busy} onClick={ignore}>Ignoră</button></div></>}
+    {c.last_error&&<p className="error small">Eroare: {c.last_error}</p>}
+  </article>
+}
+function Comments({user,onNotice}){
+  const [items,setItems]=useState([]),[filter,setFilter]=useState('todo'),[mode,setMode]=useState('approve'),[syncing,setSyncing]=useState(false)
+  const load=()=>listComments().then(setItems).catch(e=>onNotice(`Comentariile nu s-au încărcat: ${e.message}`))
+  useEffect(()=>{if(!user)return;load();listAutomationSettings().then(s=>s?.comments_mode&&setMode(s.comments_mode)).catch(()=>{})},[user])
+  const saveMode=async(value)=>{setMode(value);try{await saveAutomationSettings({owner_id:user.id,comments_mode:value});onNotice('Modul de răspuns a fost salvat')}catch(e){onNotice(`Nu s-a salvat: ${e.message}`)}}
+  const sync=async()=>{setSyncing(true);try{const r=await commentsAction({action:'sync'});await load();onNotice(`Verificat: ${r.new||0} comentarii noi${r.auto_sent?`, ${r.auto_sent} răspunsuri trimise automat`:''}`)}catch(e){onNotice(e.message)}finally{setSyncing(false)}}
+  if(!user) return <><PageTitle eyebrow="COMUNITATE" title="Comentarii" desc="Autentifică-te ca să vezi comentariile."/></>
+  const todo=items.filter(c=>['unreviewed','approved','failed'].includes(c.reply_status))
+  const shown=filter==='todo'?todo:filter==='sent'?items.filter(c=>c.reply_status==='sent'):items
+  const modes=[['off','Oprit','AI-ul nu scrie nimic'],['approve','Cu aprobare','AI-ul scrie, tu apeși Trimite'],['auto_safe','Automat (sigur)','Laude și întrebări simple primesc răspuns singure; criticile rămân la tine']]
+  return <><PageTitle eyebrow="COMUNITATE" title="Comentarii" desc="AI-ul citește comentariile de pe Facebook, Instagram și YouTube la fiecare 10 minute și îți pregătește răspunsuri." action={<button className="outline" disabled={syncing} onClick={sync}>{syncing?'Verific…':'↻ Verifică acum'}</button>}/>
+    <section className="card" style={{marginBottom:16}}><CardHead title="Cum răspunde AI-ul"/><div className="mode-picker">{modes.map(([v,l,d])=><button key={v} className={mode===v?'active':''} onClick={()=>saveMode(v)}><b>{l}</b><span>{d}</span></button>)}</div><p className="muted small">TikTok nu permite răspunsuri prin API, acolo răspunzi din aplicație.</p></section>
+    <div className="tabs-inline">{[['todo',`De răspuns (${todo.length})`],['sent','Trimise'],['all','Toate']].map(([v,l])=><button key={v} className={filter===v?'active':''} onClick={()=>setFilter(v)}>{l}</button>)}</div>
+    {shown.length?<div className="comment-list">{shown.map(c=><CommentCard key={c.id} c={c} onNotice={onNotice} onChange={n=>setItems(list=>list.map(x=>x.id===n.id?n:x))}/>)}</div>:<section className="card empty"><p className="muted">{filter==='todo'?'Niciun comentariu nou de răspuns. Apar aici după ce postările publicate primesc comentarii.':'Nimic aici încă.'}</p></section>}
+  </>
+}
 function Automation({user,onNotice}){
   const [ig,setIg]=useState(true),[fb,setFb]=useState(true),[yt,setYt]=useState(true),[tt,setTt]=useState(true),[approval,setApproval]=useState(true),[groupCount,setGroupCount]=useState(5),[groupEnabled,setGroupEnabled]=useState(true)
   const [igSlots,setIgSlots]=useState(['12:30','19:30']),[fbSlots,setFbSlots]=useState(['12:30','19:30']),[ytSlots,setYtSlots]=useState(['12:30','19:30']),[ttSlots,setTtSlots]=useState(['12:30','19:30'])

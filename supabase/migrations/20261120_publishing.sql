@@ -90,3 +90,29 @@ grant all on all tables in schema public to service_role;
 grant all on all sequences in schema public to service_role;
 alter default privileges in schema public grant all on tables to service_role;
 alter default privileges in schema public grant all on sequences to service_role;
+
+-- Comentarii: răspunsuri cu AI (etapa 5).
+alter table public.comment_threads drop constraint if exists comment_threads_platform_check;
+alter table public.comment_threads add constraint comment_threads_platform_check check (platform in ('facebook','instagram','youtube','tiktok'));
+alter table public.comment_threads add column if not exists post_id uuid references public.posts(id) on delete set null;
+alter table public.comment_threads add column if not exists last_error text;
+alter table public.automation_settings add column if not exists comments_mode text not null default 'approve';
+alter table public.automation_settings drop constraint if exists automation_settings_comments_mode_check;
+alter table public.automation_settings add constraint automation_settings_comments_mode_check check (comments_mode in ('off','approve','auto_safe'));
+
+create or replace function public.trigger_comments_sync()
+returns void language plpgsql security definer set search_path = public, vault as $$
+declare base_url text; cron_secret text;
+begin
+  select decrypted_secret into base_url from vault.decrypted_secrets where name = 'project_url';
+  select decrypted_secret into cron_secret from vault.decrypted_secrets where name = 'publisher_cron_secret';
+  if base_url is null or cron_secret is null then return; end if;
+  perform net.http_post(url := base_url || '/functions/v1/comments-sync',
+    headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',cron_secret), body := '{}'::jsonb, timeout_milliseconds := 5000);
+end $$;
+revoke all on function public.trigger_comments_sync() from public, anon, authenticated;
+
+do $$ begin
+  perform cron.unschedule('postamosului-comments-sync') where exists (select 1 from cron.job where jobname = 'postamosului-comments-sync');
+  perform cron.schedule('postamosului-comments-sync', '*/10 * * * *', 'select public.trigger_comments_sync()');
+end $$;

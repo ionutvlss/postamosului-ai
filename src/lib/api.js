@@ -183,3 +183,25 @@ export async function updateGroupCandidate(id, patch) {
   if (error) throw error
   return data
 }
+
+export async function listComments() {
+  const client = requireClient()
+  const { data, error } = await client.from('comment_threads').select('*').order('created_at', { ascending: false }).limit(200)
+  if (error) throw error
+  return data
+}
+
+export async function updateComment(id, patch) {
+  const client = requireClient()
+  const { data, error } = await client.from('comment_threads').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function commentsAction(body) {
+  const client = requireClient()
+  const { data, error } = await client.functions.invoke('comments-sync', { body })
+  if (data?.error) throw new Error(data.error)
+  if (error) throw error
+  return data
+}

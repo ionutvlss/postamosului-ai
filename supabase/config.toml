@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.ingest-video]
 verify_jwt = false
+
+[functions.comments-sync]
+verify_jwt = false
