@@ -57,7 +57,7 @@ async function nextFreeSlot(ownerId: string, platform: Platform, from: Date, pre
 async function createGroupDrafts(ownerId: string, mediaId: string, texts: string[], ingestId: string | null) {
   const db = adminClient()
   const { data: groups } = await db.from('group_candidates').select('id, group_name')
-    .eq('owner_id', ownerId).neq('status', 'excluded').order('created_at', { ascending: true })
+    .eq('owner_id', ownerId).eq('status', 'shortlisted').order('created_at', { ascending: true })
   if (!groups?.length) return []
   const since = new Date(Date.now() - 6 * 86400000).toISOString()
   const { data: recent } = await db.from('group_outreach_drafts').select('group_id, created_at, status')
@@ -87,6 +87,31 @@ Deno.serve(async (request) => {
     if (!safeEqual(request.headers.get('x-ingest-secret') || '', env('INGEST_SECRET'))) throw new HttpError(401, 'Secret invalid')
     const input = await request.json().catch(() => null)
     if (!input || typeof input !== 'object') throw new HttpError(400, 'Body JSON invalid')
+
+    // Sugestii de grupuri (găsite de Claude): nu au nevoie de video.
+    if (Array.isArray(input.groups_suggest)) {
+      const db0 = adminClient()
+      const { data: owner0 } = await db0.from('profiles').select('id').eq('role', 'admin').order('created_at', { ascending: true }).limit(1).maybeSingle()
+      if (!owner0) throw new Error('Nu există un administrator în platformă')
+      const added = []
+      for (const raw of (input.groups_suggest as Record<string, unknown>[]).slice(0, 100)) {
+        const url = String(raw.url || '').trim().split('?')[0].replace(/\/$/, '')
+        const match = /^https:\/\/(?:www\.|m\.)?facebook\.com\/groups\/([^/]+)$/.exec(url)
+        const name = String(raw.name || '').trim().slice(0, 150)
+        if (!match || !name) continue
+        const externalId = `fb-${match[1]}`
+        const { data: exists } = await db0.from('group_candidates').select('id').eq('owner_id', owner0.id).eq('external_group_id', externalId).maybeSingle()
+        if (exists) continue
+        const { error } = await db0.from('group_candidates').insert({
+          owner_id: owner0.id, external_group_id: externalId, group_name: name, group_url: `https://www.facebook.com/groups/${match[1]}`,
+          category: String(raw.category || '').slice(0, 80) || null, member_count: Number(raw.members) || null,
+          relevance_score: Math.min(100, Math.max(0, Number(raw.score) || 0)) || null, status: 'discovered', language: 'ro',
+          metadata: { reason: String(raw.reason || '').slice(0, 300), privacy: String(raw.privacy || ''), source: 'claude' },
+        })
+        if (!error) added.push(name)
+      }
+      return json({ added: added.length, groups: added })
+    }
 
     const videoUrl = String(input.video_url || '')
     if (!/^https:\/\//.test(videoUrl)) throw new HttpError(400, 'video_url trebuie să fie un link https')

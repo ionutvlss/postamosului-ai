@@ -274,18 +274,26 @@ function Groups({user,onNotice}){
   const done=async d=>{try{await updateGroupDraft(d.id,{status:'posted',posted_at:new Date().toISOString()});await load();onNotice('Marcat ca postat')}catch(e){onNotice(e.message)}}
   const skip=async d=>{try{await updateGroupDraft(d.id,{status:'rejected'});await load()}catch(e){onNotice(e.message)}}
   const toggleGroup=async g=>{try{await updateGroupCandidate(g.id,{status:g.status==='excluded'?'shortlisted':'excluded'});await load()}catch(e){onNotice(e.message)}}
-  const active=groups.filter(g=>g.status!=='excluded').length
+  const suggestions=groups.filter(g=>g.status==='discovered')
+  const listed=groups.filter(g=>g.status!=='discovered')
+  const active=listed.filter(g=>g.status!=='excluded').length
+  const accept=async g=>{try{await updateGroupCandidate(g.id,{status:'shortlisted'});await load();onNotice('Adăugat în rotație. Intră în grup de pe Facebook ca să poți posta.')}catch(e){onNotice(e.message)}}
+  const decline=async g=>{try{await updateGroupCandidate(g.id,{status:'excluded',metadata:{...(g.metadata||{}),declined:true}});await load()}catch(e){onNotice(e.message)}}
   return <><PageTitle eyebrow="GRUPURI FACEBOOK" title="Grupuri Facebook" desc="5 postări pe zi în grupuri, pregătite automat. Tu doar le postezi."/>
   <div className="group-note">♢ <span>Meta nu permite postarea automată în grupuri: contul ar risca blocarea. Platforma pregătește textul și media, tu postezi manual (~1 minut pe grup).</span></div>
   <section className="card queue-card"><CardHead title={`De postat azi (${todo.length})`}/>
     {!todo.length&&<p className="muted">Nimic de postat acum. Postările pentru grupuri apar aici în fiecare dimineață.</p>}
     <div className="queue">{todo.map(d=><GroupDraftCard key={d.id} draft={d} group={byId[d.group_id]} media={media[d.media_id]} onDone={done} onSkip={skip} onNotice={onNotice}/>)}</div>
   </section>
+  {suggestions.length>0&&<section className="card" style={{marginBottom:16}}><CardHead title={`Sugestii găsite (${suggestions.length})`}/>
+    <p className="muted">Grupuri găsite automat. Deschide-l, citește regulile, intră în grup și apoi apasă „Adaug”.</p>
+    <div className="groups-list">{suggestions.sort((a,b)=>(b.relevance_score||0)-(a.relevance_score||0)).map(g=><div className="group-row" key={g.id}><div className="group-avatar">{g.group_name.charAt(0)}</div><div className="group-main"><b>{g.group_name}</b><span>{g.member_count?`${g.member_count.toLocaleString('ro-RO')} membri · `:''}{g.metadata?.privacy?`${g.metadata.privacy} · `:''}{g.metadata?.reason||g.category||''}</span></div>{g.relevance_score?<div className="relevance"><small>POTRIVIRE</small><b>{Math.round(g.relevance_score)}%</b></div>:null}<a className="outline small" href={g.group_url} target="_blank" rel="noreferrer">Deschide</a><button className="primary small" onClick={()=>accept(g)}>Adaug</button><button className="outline small danger" onClick={()=>decline(g)}>Nu</button></div>)}</div>
+  </section>}
   <section className="card" style={{marginBottom:16}}><CardHead title={`Grupurile tale (${active} în rotație)`}/>
     <p className="muted">Recomandat: cel puțin 25–35 de grupuri, ca fiecare să primească o postare cel mult o dată pe săptămână. Verifică regulile fiecărui grup (unele permit reclame doar în anumite zile).</p>
     <div className="form-row"><label>Numele grupului<input value={name} onChange={e=>setName(e.target.value)} placeholder="ex. Mămici din Brașov"/></label><label>Link grup<input value={link} onChange={e=>setLink(e.target.value)} placeholder="https://facebook.com/groups/…"/></label></div>
     <button className="primary" style={{marginTop:12}} disabled={busy==='add'} onClick={add}>＋ Adaugă grupul</button>
-    <div className="groups-list" style={{marginTop:18}}>{!groups.length&&<p className="muted">Nu ai adăugat încă niciun grup.</p>}{groups.map(g=><div className={`group-row ${g.status==='excluded'?'paused':''}`} key={g.id}><div className="group-avatar">{g.group_name.charAt(0)}</div><div className="group-main"><b>{g.group_name}</b><span>{postedCount(g.id)} postări{lastPosted(g.id)?` · ultima pe ${lastPosted(g.id)}`:''}{g.group_url?<> · <a className="text-btn" href={g.group_url} target="_blank" rel="noreferrer">deschide</a></>:''}</span></div><button className="outline small" onClick={()=>toggleGroup(g)}>{g.status==='excluded'?'Reia':'Pauză'}</button></div>)}</div>
+    <div className="groups-list" style={{marginTop:18}}>{!listed.length&&<p className="muted">Nu ai adăugat încă niciun grup.</p>}{listed.filter(g=>!g.metadata?.declined).map(g=><div className={`group-row ${g.status==='excluded'?'paused':''}`} key={g.id}><div className="group-avatar">{g.group_name.charAt(0)}</div><div className="group-main"><b>{g.group_name}</b><span>{postedCount(g.id)} postări{lastPosted(g.id)?` · ultima pe ${lastPosted(g.id)}`:''}{g.group_url?<> · <a className="text-btn" href={g.group_url} target="_blank" rel="noreferrer">deschide</a></>:''}</span></div><button className="outline small" onClick={()=>toggleGroup(g)}>{g.status==='excluded'?'Reia':'Pauză'}</button></div>)}</div>
   </section></>}
 function Analytics(){
   const [items,setItems]=useState([])
