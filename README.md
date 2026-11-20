@@ -33,3 +33,7 @@ supabase secrets set OPENAI_API_KEY=cheia-ta OPENAI_MODEL=gpt-4.1-mini
 ```
 
 Cheia OpenAI rămâne în secrets Supabase și nu se adaugă în `.env.local` sau GitHub.
+
+## Publicare automată
+
+Vezi [SETUP.md](SETUP.md): conectarea Facebook, Instagram, YouTube și TikTok, plus deploy-ul automat Supabase din GitHub Actions.

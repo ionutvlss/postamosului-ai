@@ -142,3 +142,18 @@ export async function generateContent(input) {
   if (data?.error) throw new Error(data.error)
   return data
 }
+
+export async function startConnect(provider) {
+  const client = requireClient()
+  const returnTo = `${window.location.origin}${window.location.pathname}`
+  const { data } = await client.functions.invoke('oauth-start', { body:{ provider, return_to:returnTo } })
+  if (data?.error) throw new Error(data.error)
+  window.location.href = data.url
+}
+
+export async function publishNow(postId) {
+  const client = requireClient()
+  const { data } = await client.functions.invoke('publish-due', { body:{ post_id:postId } })
+  if (data?.error) throw new Error(data.error)
+  return data
+}
