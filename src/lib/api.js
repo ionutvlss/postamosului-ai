@@ -157,3 +157,8 @@ export async function publishNow(postId) {
   if (data?.error) throw new Error(data.error)
   return data
 }
+
+export async function deletePost(id) {
+  const client = requireClient()
+  await client.from('posts').delete().eq('id', id)
+}

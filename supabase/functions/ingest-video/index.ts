@@ -35,7 +35,8 @@ function bucharestDay(at: Date) {
 /** Prima oră liberă (din sloturile platformei) începând cu `from`, fără altă postare activă în același minut. */
 async function nextFreeSlot(ownerId: string, platform: Platform, from: Date, preferredSlot?: number) {
   const db = adminClient()
-  const { data: schedule } = await db.from('publishing_schedules').select('slots').eq('owner_id', ownerId).eq('platform', platform).maybeSingle()
+  const { data: schedule, error: scheduleError } = await db.from('publishing_schedules').select('slots').eq('owner_id', ownerId).eq('platform', platform).maybeSingle()
+  if (scheduleError) console.error('ingest-video schedule', platform, scheduleError.message)
   const slots: string[] = Array.isArray(schedule?.slots) && schedule.slots.length ? schedule.slots : DEFAULT_SLOTS
   const ordered = preferredSlot !== undefined && slots[preferredSlot] ? [slots[preferredSlot]] : slots
   const { data: busy } = await db.from('posts').select('scheduled_for').eq('owner_id', ownerId).eq('platform', platform)
@@ -76,8 +77,15 @@ Deno.serve(async (request) => {
     if (Number.isNaN(startFrom.getTime())) throw new HttpError(400, 'not_before invalid')
 
     const db = adminClient()
+    const dryRun = input.dry_run === true
     const { data: owner } = await db.from('profiles').select('id').eq('role', 'admin').order('created_at', { ascending: true }).limit(1).maybeSingle()
     if (!owner) throw new Error('Nu există un administrator în platformă')
+
+    if (dryRun) {
+      const slots = []
+      for (const platform of platforms) slots.push({ platform, scheduled_for: (await nextFreeSlot(owner.id, platform, startFrom, slotIndex)).toISOString() })
+      return json({ dry_run: true, slots })
+    }
 
     // Idempotent: același ingest_id nu creează postări de două ori.
     if (ingestId) {
