@@ -116,3 +116,23 @@ do $$ begin
   perform cron.unschedule('postamosului-comments-sync') where exists (select 1 from cron.job where jobname = 'postamosului-comments-sync');
   perform cron.schedule('postamosului-comments-sync', '*/10 * * * *', 'select public.trigger_comments_sync()');
 end $$;
+
+-- Automatizarea zilnică (2 clipuri pe zi): buton Start/Stop în platformă și jurnal de rulări.
+alter table public.automation_settings add column if not exists daily_enabled boolean not null default false;
+alter table public.automation_settings add column if not exists daily_toggled_at timestamptz;
+
+create table if not exists public.automation_runs (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  kind text not null default 'daily_clips',
+  status text not null check (status in ('started','done','skipped','failed')),
+  summary text,
+  cost_usd numeric(8,2),
+  created_at timestamptz not null default now()
+);
+create index if not exists automation_runs_owner_created on public.automation_runs (owner_id, created_at desc);
+alter table public.automation_runs enable row level security;
+drop policy if exists automation_runs_admin on public.automation_runs;
+create policy automation_runs_admin on public.automation_runs for select using (owner_id = auth.uid() and public.is_admin());
+grant select on public.automation_runs to authenticated;
+grant all on public.automation_runs to service_role;

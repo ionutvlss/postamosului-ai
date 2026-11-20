@@ -88,6 +88,28 @@ Deno.serve(async (request) => {
     const input = await request.json().catch(() => null)
     if (!input || typeof input !== 'object') throw new HttpError(400, 'Body JSON invalid')
 
+    // Automatizarea zilnică: starea butonului Start/Stop și jurnalul de rulări (le folosește sarcina programată).
+    if (input.action === 'status' || input.action === 'log_run') {
+      const dbA = adminClient()
+      const { data: ownerA } = await dbA.from('profiles').select('id').eq('role', 'admin').order('created_at', { ascending: true }).limit(1).maybeSingle()
+      if (!ownerA) throw new Error('Nu există un administrator în platformă')
+      const { data: settingsA } = await dbA.from('automation_settings').select('daily_enabled, daily_toggled_at').eq('owner_id', ownerA.id).maybeSingle()
+      const enabled = settingsA?.daily_enabled === true
+      if (input.action === 'status') {
+        const { data: lastRuns } = await dbA.from('automation_runs').select('status, summary, created_at').eq('owner_id', ownerA.id).order('created_at', { ascending: false }).limit(3)
+        return json({ daily_enabled: enabled, toggled_at: settingsA?.daily_toggled_at || null, last_runs: lastRuns || [] })
+      }
+      const status = String(input.status || '')
+      if (!['started', 'done', 'skipped', 'failed'].includes(status)) throw new HttpError(400, 'status invalid')
+      const cost = Number(input.cost_usd)
+      const { error: logError } = await dbA.from('automation_runs').insert({
+        owner_id: ownerA.id, kind: 'daily_clips', status, summary: String(input.summary || '').slice(0, 1000) || null,
+        cost_usd: Number.isFinite(cost) && cost >= 0 ? Math.min(cost, 999) : null,
+      })
+      if (logError) throw logError
+      return json({ logged: true, daily_enabled: enabled })
+    }
+
     // Sugestii de grupuri (găsite de Claude): nu au nevoie de video.
     if (Array.isArray(input.groups_suggest)) {
       const db0 = adminClient()
@@ -134,6 +156,12 @@ Deno.serve(async (request) => {
     const dryRun = input.dry_run === true
     const { data: owner } = await db.from('profiles').select('id').eq('role', 'admin').order('created_at', { ascending: true }).limit(1).maybeSingle()
     if (!owner) throw new Error('Nu există un administrator în platformă')
+
+    // Butonul Stop din platformă are ultimul cuvânt: clipurile zilnice nu intră dacă automatizarea e oprită.
+    if (String(input.source || '') === 'claude-daily') {
+      const { data: settings } = await db.from('automation_settings').select('daily_enabled').eq('owner_id', owner.id).maybeSingle()
+      if (settings?.daily_enabled !== true) throw new HttpError(409, 'Automatizarea zilnică este oprită din platformă')
+    }
 
     if (dryRun) {
       const slots = []

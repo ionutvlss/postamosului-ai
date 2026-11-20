@@ -205,3 +205,19 @@ export async function commentsAction(body) {
   if (error) throw error
   return data
 }
+
+export async function setDailyAutomation(ownerId, enabled) {
+  const client = requireClient()
+  const { data, error } = await client.from('automation_settings')
+    .upsert({ owner_id: ownerId, daily_enabled: enabled, daily_toggled_at: new Date().toISOString() }, { onConflict: 'owner_id' })
+    .select().single()
+  if (error) throw error
+  return data
+}
+
+export async function listAutomationRuns() {
+  const client = requireClient()
+  const { data, error } = await client.from('automation_runs').select('*').order('created_at', { ascending: false }).limit(8)
+  if (error) throw error
+  return data
+}
