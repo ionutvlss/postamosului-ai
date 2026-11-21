@@ -197,7 +197,7 @@ async function syncStats() {
     }
     for (const d of due) {
       const stat = results.get(d.external_post_id) || { note: 'Clipul nu a fost găsit (poate a fost șters)' }
-      const prev = d.metadata?.stats || {}
+      const { note: _oldNote, ...prev } = d.metadata?.stats || {}
       await db().from('posts').update({ metadata: { ...(d.metadata || {}), stats: { ...prev, ...stat, at: new Date().toISOString() } } }).eq('id', d.id)
       if (stat.note) out.errors++; else out.updated++
     }
