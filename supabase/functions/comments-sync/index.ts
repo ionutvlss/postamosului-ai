@@ -131,6 +131,18 @@ async function syncStats() {
         const dbg = await fetchJson(`${GRAPH}/debug_token?${new URLSearchParams({ input_token: accessToken, access_token: `${env('META_APP_ID')}|${env('META_APP_SECRET')}` })}`)
         await db().from('social_accounts').update({ metadata: { ...(acc.metadata || {}), granted_scopes: dbg.data?.scopes || [], token_type: dbg.data?.type || null } }).eq('id', acc.id)
       } catch (e) { console.error('debug_token', (e as Error).message) }
+      // Sondă temporară: care apeluri de statistici merg cu tokenul actual (pentru depanare).
+      const probe: Record<string, string> = {}
+      const sample = (await db().from('posts').select('external_post_id').eq('platform', acc.platform).eq('status', 'published').not('external_post_id', 'is', null).order('published_at', { ascending: false }).limit(1)).data?.[0]?.external_post_id
+      const tries: [string, string][] = acc.platform === 'instagram'
+        ? [['reach', `${sample}/insights?metric=reach`], ['plays', `${sample}/insights?metric=ig_reels_aggregated_all_plays_count`], ['account', `${acc.external_account_id}/insights?metric=reach&period=day`]]
+        : [['vi_all', `${sample}/video_insights`], ['views_field', `${sample}?fields=views,length`], ['page', `${acc.external_account_id}/insights?metric=page_impressions_unique&period=day`]]
+      for (const [k, path] of tries) {
+        try { const r = await fetchJson(`${GRAPH}/${path}${path.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(accessToken)}`); probe[k] = 'OK ' + JSON.stringify(r).slice(0, 160) }
+        catch (e) { probe[k] = 'ERR ' + (e as Error).message.slice(0, 160) }
+      }
+      const { data: fresh } = await db().from('social_accounts').select('metadata').eq('id', acc.id).maybeSingle()
+      await db().from('social_accounts').update({ metadata: { ...(fresh?.metadata || {}), stats_probe: probe } }).eq('id', acc.id)
     }
     const { data: rows } = await db().from('posts').select('id, external_post_id, metadata').eq('owner_id', acc.owner_id).eq('platform', acc.platform)
       .eq('status', 'published').not('external_post_id', 'is', null).gte('published_at', new Date(Date.now() - 60 * 86400000).toISOString()).limit(80)
