@@ -224,7 +224,7 @@ export async function listAutomationRuns() {
 
 export async function listCosts() {
   const client = requireClient()
-  const { data, error } = await client.from('marketing_costs').select('*').order('spent_on', { ascending: false }).order('created_at', { ascending: false })
+  const { data, error } = await client.from('marketing_costs').select('*').order('spent_on', { ascending: false })
   if (error) throw error
   return data
 }
