@@ -39,13 +39,28 @@ Răspunde DOAR JSON: {"posts":[{"angle":"2-4 cuvinte","text":"postarea completă
 }
 
 const clean = (s: unknown, max = 2000) => String(s ?? '').trim().slice(0, max)
+/** Găsește lista din răspuns oricum ar numi-o modelul (variants / posts / items / prima listă). */
+const listOf = (r: Record<string, unknown> | null, key: string) => {
+  if (!r) return [] as Record<string, unknown>[]
+  const v = r[key] ?? r.items ?? Object.values(r).find(Array.isArray)
+  return (Array.isArray(v) ? v : []).map(x => typeof x === 'string' ? { text: x, body: x } : x) as Record<string, unknown>[]
+}
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
     if (request.method !== 'POST') throw new HttpError(405, 'Method not allowed')
     // Întâi verificăm administratorul: nimeni altcineva nu consumă din cheile AI.
-    const ownerId = await requireAdmin(request)
+    // Test automat (din diagnostic, cu secretul cron): rulează ca primul administrator.
+    let ownerId: string
+    const cronSecret = request.headers.get('x-cron-secret')
+    if (cronSecret) {
+      const { data: ok } = await adminClient().rpc('check_publisher_secret', { candidate: cronSecret })
+      if (!ok) throw new HttpError(401, 'Secret cron invalid')
+      const { data: admin } = await adminClient().from('profiles').select('id').eq('role', 'admin').order('created_at', { ascending: true }).limit(1).maybeSingle()
+      if (!admin) throw new HttpError(500, 'Nu există administrator')
+      ownerId = admin.id
+    } else ownerId = await requireAdmin(request)
     const { data: settings } = await adminClient().from('automation_settings').select('brand_voice').eq('owner_id', ownerId).maybeSingle()
     const voice = clean(settings?.brand_voice, 300)
     const input = await request.json().catch(() => ({}))
@@ -55,20 +70,19 @@ Deno.serve(async (request) => {
 
     if (mode === 'groups') {
       const result = await aiJson(groupsPrompt(brief, clean(input.group_type, 20), clean(input.length, 10), voice), 0.9, { fast: true })
-      const posts = Array.isArray(result?.posts) ? (result!.posts as Record<string, unknown>[])
-        .map(p => ({ angle: clean(p.angle, 40), text: clean(p.text, 1500) })).filter(p => p.text) : []
-      if (!posts.length) throw new HttpError(502, 'AI-ul nu a răspuns. Încearcă din nou.')
+      const posts = listOf(result, 'posts').map(p => ({ angle: clean(p.angle, 40), text: clean(p.text ?? p.body ?? p.post, 1500) })).filter(p => p.text)
+      if (!posts.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : 'Niciun model AI nu a răspuns (verifică cheia Gemini/OpenAI).')
       return json({ mode, posts, model: result?._model })
     }
 
     const platform = clean(input.platform || 'all', 40)
     const tone = clean(input.tone || 'cald, dar orientat spre vânzare', 80)
     const result = await aiJson(socialPrompt(brief, platform, tone, voice), 0.9, { fast: true })
-    const variants = Array.isArray(result?.variants) ? (result!.variants as Record<string, unknown>[]).map(v => ({
-      angle: clean(v.angle, 40), hook: clean(v.hook, 90), title: clean(v.title, 100), body: clean(v.body, 1200),
+    const variants = listOf(result, 'variants').map(v => ({
+      angle: clean(v.angle, 40), hook: clean(v.hook, 90), title: clean(v.title ?? v.hook, 100), body: clean(v.body ?? v.caption ?? v.text, 1200),
       hashtags: (Array.isArray(v.hashtags) ? v.hashtags : []).map(h => clean(h, 40)).filter(Boolean).slice(0, 8),
-    })).filter(v => v.body) : []
-    if (!variants.length) throw new HttpError(502, 'AI-ul nu a răspuns. Încearcă din nou.')
+    })).filter(v => v.body)
+    if (!variants.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : 'Niciun model AI nu a răspuns (verifică cheia Gemini/OpenAI).')
     // compatibilitate: primele câmpuri ca înainte (title/body/hashtags) pentru orice apelant vechi
     return json({ mode, platform, variants, title: variants[0].title, body: variants[0].body, hashtags: variants[0].hashtags, model: result?._model })
   } catch (error) {

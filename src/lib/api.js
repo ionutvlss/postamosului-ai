@@ -186,9 +186,9 @@ export async function updateGroupCandidate(id, patch) {
 
 export async function listComments() {
   const client = requireClient()
-  const { data, error } = await client.from('comment_threads').select('*').order('created_at', { ascending: false }).limit(200)
+  const { data, error } = await client.from('comment_threads').select('*').order('created_at', { ascending: false })
   if (error) throw error
-  return data
+  return (data || []).slice(0, 200)
 }
 
 export async function updateComment(id, patch) {
@@ -217,9 +217,9 @@ export async function setDailyAutomation(ownerId, enabled) {
 
 export async function listAutomationRuns() {
   const client = requireClient()
-  const { data, error } = await client.from('automation_runs').select('*').order('created_at', { ascending: false }).limit(8)
+  const { data, error } = await client.from('automation_runs').select('*').order('created_at', { ascending: false })
   if (error) throw error
-  return data
+  return (data || []).slice(0, 8)
 }
 
 export async function listCosts() {

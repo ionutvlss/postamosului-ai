@@ -3,6 +3,10 @@ name: Diagnostic Supabase
 on:
   workflow_dispatch:
     inputs:
+      test_ai:
+        description: "Testează AI Content Studio (social / groups)"
+        required: false
+        default: ""
       retry_ingest:
         description: "Reprogramează acum postările eșuate cu acest ingest_id (ex. 2026-11-21-test-complet)"
         required: false
@@ -15,6 +19,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       RETRY_INGEST: ${{ inputs.retry_ingest }}
+      TEST_AI: ${{ inputs.test_ai }}
     steps:
       - name: Verificări (fără valori secrete)
         run: |
@@ -29,6 +34,11 @@ jobs:
             if echo "$RETRY_INGEST" | grep -Eq '^[A-Za-z0-9-]{3,80}$'; then
               q "Reprogramare $RETRY_INGEST" "update public.posts set status='scheduled', attempts=0, last_error=null, scheduled_for=now() where status='failed' and metadata->>'ingest_id'='$RETRY_INGEST' returning platform, status"
             else echo "retry_ingest invalid"; fi
+          fi
+          if [ "$TEST_AI" = "social" ] || [ "$TEST_AI" = "groups" ]; then
+            q "Pornesc testul AI ($TEST_AI)" "select net.http_post(url := (select decrypted_secret from vault.decrypted_secrets where name='project_url') || '/functions/v1/generate-content', headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',(select decrypted_secret from vault.decrypted_secrets where name='publisher_cron_secret')), body := jsonb_build_object('mode','$TEST_AI','prompt','Moș Nicolae: pune în ghete un videoclip de la Moș'), timeout_milliseconds := 60000) id"
+            sleep 45
+            q "Rezultat test AI" "select status_code, round(extract(epoch from (now()-created))) age_s, left(coalesce(content::text, error_msg),1500) content from net._http_response order by created desc limit 1"
           fi
           q "Joburi cron" "select jobname, schedule, active from cron.job"
           q "Ultimele rulări cron" "select j.jobname, d.status, d.start_time, left(coalesce(d.return_message,''),120) msg from cron.job_run_details d join cron.job j using (jobid) order by d.start_time desc limit 5"

@@ -112,6 +112,9 @@ export async function saveAccount(input: {
  * Cere un răspuns JSON de la AI, cu rezerve: modelul din GEMINI_MODEL (dacă e setat), gemini-3.5-flash,
  * gemini-2.5-flash, apoi OpenAI (OPENAI_MODEL sau gpt-4.1-mini). Întoarce null dacă niciunul nu răspunde valid.
  */
+/** Modelul răspunde uneori cu o listă direct, în loc de obiect: o punem sub cheia „items”. */
+const asObject = (v: unknown) => Array.isArray(v) ? { items: v } : (v && typeof v === 'object' ? v as Record<string, unknown> : { value: v })
+
 /** `fast`: fără „gândire” extinsă (răspuns în câteva secunde) și cu limită de timp pe fiecare model. */
 export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: boolean } = {}): Promise<Record<string, unknown> | null> {
   const geminiKey = Deno.env.get('GEMINI_API_KEY')
@@ -130,7 +133,7 @@ export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: b
         if (res.status === 400 && thinking) res = await call(false) // modelul nu acceptă setarea: încearcă fără ea
         const payload = await res.json().catch(() => ({}))
         const text = payload?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || ''
-        if (res.ok && text) return { ...JSON.parse(text.replace(/^```json\s*|\s*```$/g, '').trim()), _model: model }
+        if (res.ok && text) return { ...asObject(JSON.parse(text.replace(/^```json\s*|\s*```$/g, '').trim())), _model: model }
         console.error('aiJson gemini', model, res.status, payload?.error?.message || '')
       } catch (e) { console.error('aiJson gemini', model, (e as Error).message) }
     }
@@ -147,7 +150,7 @@ export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: b
       const payload = await res.json().catch(() => ({}))
       const text = payload.output_text || payload.output?.flatMap((i: { content?: unknown[] }) => i.content || [])
         .find((i: { type?: string }) => i.type === 'output_text')?.text || ''
-      if (res.ok && text) return { ...JSON.parse(String(text).replace(/^```json\s*|\s*```$/g, '').trim()), _model: model }
+      if (res.ok && text) return { ...asObject(JSON.parse(String(text).replace(/^```json\s*|\s*```$/g, '').trim())), _model: model }
       console.error('aiJson openai', res.status, payload?.error?.message || '')
     } catch (e) { console.error('aiJson openai', (e as Error).message) }
   }
