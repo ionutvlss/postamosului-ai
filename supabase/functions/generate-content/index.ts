@@ -67,6 +67,7 @@ Deno.serve(async (request) => {
     const voice = clean(settings?.brand_voice, 300)
     const input = await request.json().catch(() => ({}))
     const mode = input.mode === 'groups' ? 'groups' : 'social'
+    const t0 = Date.now()
     const brief = clean(input.prompt, 1500)
     if (mode === 'social' && !brief) throw new HttpError(400, 'Scrie ideea sau alege una din sugestii')
 
@@ -77,7 +78,7 @@ Deno.serve(async (request) => {
       const posts = results.flatMap(r => r ? (typeof r.text === 'string' ? [r] : listOf(r, 'posts')) : [])
         .map(p => ({ angle: clean(p.angle, 40), text: clean(p.text ?? p.body ?? p.post, 1500) })).filter(p => p.text)
       if (!posts.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : `Niciun model AI nu a răspuns: ${aiErrors.join(' | ') || 'fără detalii'}`)
-      return json({ mode, posts, model: result?._model })
+      return json({ mode, posts, model: result?._model, ms: Date.now() - t0 })
     }
 
     const platform = clean(input.platform || 'all', 40)
@@ -89,7 +90,7 @@ Deno.serve(async (request) => {
     })).filter(v => v.body)
     if (!variants.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : `Niciun model AI nu a răspuns: ${aiErrors.join(' | ') || 'fără detalii'}`)
     // compatibilitate: primele câmpuri ca înainte (title/body/hashtags) pentru orice apelant vechi
-    return json({ mode, platform, variants, title: variants[0].title, body: variants[0].body, hashtags: variants[0].hashtags, model: result?._model })
+    return json({ mode, platform, variants, title: variants[0].title, body: variants[0].body, hashtags: variants[0].hashtags, model: result?._model, ms: Date.now() - t0 })
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500
     return json({ error: (error as Error).message }, status)

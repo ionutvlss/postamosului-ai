@@ -74,7 +74,7 @@ begin
     url := base_url || '/functions/v1/publish-due',
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-secret', cron_secret),
     body := '{}'::jsonb,
-    timeout_milliseconds := 5000
+    timeout_milliseconds := 15000
   );
 end $$;
 revoke all on function public.trigger_publisher() from public, anon, authenticated;
@@ -108,7 +108,7 @@ begin
   select decrypted_secret into cron_secret from vault.decrypted_secrets where name = 'publisher_cron_secret';
   if base_url is null or cron_secret is null then return; end if;
   perform net.http_post(url := base_url || '/functions/v1/comments-sync',
-    headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',cron_secret), body := '{}'::jsonb, timeout_milliseconds := 5000);
+    headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',cron_secret), body := '{}'::jsonb, timeout_milliseconds := 15000);
 end $$;
 revoke all on function public.trigger_comments_sync() from public, anon, authenticated;
 
