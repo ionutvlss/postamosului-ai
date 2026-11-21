@@ -118,6 +118,59 @@ async function sync() {
   return summary
 }
 
+// Vizualizări, aprecieri și comentarii pentru clipurile publicate (ultimele 60 de zile), actualizate cel mult o dată la 2 ore pe postare.
+async function syncStats() {
+  const out: Record<string, number> = { updated: 0, errors: 0 }
+  const { data: accounts } = await db().from('social_accounts').select('*').in('platform', ['facebook', 'instagram', 'youtube']).eq('status', 'connected')
+  const stale = new Date(Date.now() - 2 * 3600_000).toISOString()
+  for (const acc of (accounts || []) as Account[]) {
+    let accessToken: string
+    try { accessToken = await token(acc) } catch { out.errors++; continue }
+    const { data: rows } = await db().from('posts').select('id, external_post_id, metadata').eq('owner_id', acc.owner_id).eq('platform', acc.platform)
+      .eq('status', 'published').not('external_post_id', 'is', null).gte('published_at', new Date(Date.now() - 60 * 86400000).toISOString()).limit(80)
+    const due = (rows || []).filter(r => !r.metadata?.stats?.at || r.metadata.stats.at < stale).slice(0, 25)
+    if (!due.length) continue
+    const results = new Map<string, Record<string, unknown>>()
+    if (acc.platform === 'youtube') {
+      try {
+        const r = await fetchJson(`https://www.googleapis.com/youtube/v3/videos?${new URLSearchParams({ part: 'statistics', id: due.map(d => d.external_post_id).join(',') })}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } })
+        for (const v of r.items || []) results.set(v.id, { views: Number(v.statistics?.viewCount || 0), likes: Number(v.statistics?.likeCount || 0), comments: Number(v.statistics?.commentCount || 0) })
+      } catch (e) { for (const d of due) results.set(d.external_post_id, { note: (e as Error).message.slice(0, 160) }) }
+    } else {
+      for (const d of due) {
+        const id = d.external_post_id
+        const stat: Record<string, unknown> = {}
+        try {
+          if (acc.platform === 'instagram') {
+            const m = await fetchJson(`${GRAPH}/${id}?${new URLSearchParams({ fields: 'like_count,comments_count', access_token: accessToken })}`)
+            stat.likes = Number(m.like_count || 0); stat.comments = Number(m.comments_count || 0)
+            try {
+              const ins = await fetchJson(`${GRAPH}/${id}/insights?${new URLSearchParams({ metric: 'views', access_token: accessToken })}`)
+              stat.views = Number(ins.data?.find((x: any) => x.name === 'views')?.values?.[0]?.value ?? 0)
+            } catch { stat.note = 'Vizualizările Instagram cer permisiunea „instagram_manage_insights”: reconectează Meta' }
+          } else {
+            const m = await fetchJson(`${GRAPH}/${id}?${new URLSearchParams({ fields: 'likes.summary(true).limit(0),comments.summary(true).limit(0)', access_token: accessToken })}`)
+            stat.likes = Number(m.likes?.summary?.total_count || 0); stat.comments = Number(m.comments?.summary?.total_count || 0)
+            try {
+              const ins = await fetchJson(`${GRAPH}/${id}/video_insights?${new URLSearchParams({ metric: 'blue_reels_play_count', access_token: accessToken })}`)
+              stat.views = Number(ins.data?.[0]?.values?.[0]?.value ?? 0)
+            } catch { stat.note = 'Vizualizările Facebook cer permisiunea „read_insights”: reconectează Meta' }
+          }
+        } catch (e) { stat.note = (e as Error).message.slice(0, 160) }
+        results.set(id, stat)
+      }
+    }
+    for (const d of due) {
+      const stat = results.get(d.external_post_id) || { note: 'Clipul nu a fost găsit (poate a fost șters)' }
+      const prev = d.metadata?.stats || {}
+      await db().from('posts').update({ metadata: { ...(d.metadata || {}), stats: { ...prev, ...stat, at: new Date().toISOString() } } }).eq('id', d.id)
+      if (stat.note) out.errors++; else out.updated++
+    }
+  }
+  return out
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
@@ -125,11 +178,14 @@ Deno.serve(async (request) => {
     if (cronSecret) {
       const { data: ok } = await db().rpc('check_publisher_secret', { candidate: cronSecret })
       if (!ok) throw new HttpError(401, 'Secret cron invalid')
-      return json(await sync())
+      const comments = await sync()
+      const stats = await syncStats().catch(e => ({ error: (e as Error).message }))
+      return json({ ...comments, stats })
     }
     const ownerId = await requireAdmin(request)
     const input = await request.json().catch(() => ({}))
     if (input.action === 'sync') return json(await sync())
+    if (input.action === 'stats') return json(await syncStats())
     if (input.action === 'redraft') {
       const { data: row } = await db().from('comment_threads').select('*').eq('id', input.id).eq('owner_id', ownerId).maybeSingle()
       if (!row) throw new HttpError(404, 'Comentariul nu există')

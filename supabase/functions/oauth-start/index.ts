@@ -5,7 +5,7 @@ const ALLOWED_RETURN = [/^https:\/\/ionutvlss\.github\.io\/postamosului-ai\//, /
 
 const META_SCOPES = [
   'pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'business_management',
-  'instagram_basic', 'instagram_content_publish',
+  'instagram_basic', 'instagram_content_publish', 'instagram_manage_insights', 'read_insights',
   'pages_read_user_content', 'pages_manage_engagement', 'instagram_manage_comments',
 ].join(',')
 const YOUTUBE_SCOPES = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl'

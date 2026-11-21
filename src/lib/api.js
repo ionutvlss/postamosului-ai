@@ -221,3 +221,23 @@ export async function listAutomationRuns() {
   if (error) throw error
   return data
 }
+
+export async function listCosts() {
+  const client = requireClient()
+  const { data, error } = await client.from('marketing_costs').select('*').order('spent_on', { ascending: false }).order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function addCost(row) {
+  const client = requireClient()
+  const { data: { user } } = await client.auth.getUser()
+  const { error } = await client.from('marketing_costs').insert({ ...row, owner_id: user.id, source: 'manual' })
+  if (error) throw error
+}
+
+export async function deleteCost(id) {
+  const client = requireClient()
+  const { error } = await client.from('marketing_costs').delete().eq('id', id)
+  if (error) throw error
+}

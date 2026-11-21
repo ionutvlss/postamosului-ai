@@ -98,7 +98,7 @@ Deno.serve(async (request) => {
     if (!input || typeof input !== 'object') throw new HttpError(400, 'Body JSON invalid')
 
     // Automatizarea zilnică: starea butonului Start/Stop și jurnalul de rulări (le folosește sarcina programată).
-    if (input.action === 'status' || input.action === 'log_run') {
+    if (input.action === 'status' || input.action === 'log_run' || input.action === 'log_cost') {
       const dbA = adminClient()
       const { data: ownerA } = await dbA.from('profiles').select('id').eq('role', 'admin').order('created_at', { ascending: true }).limit(1).maybeSingle()
       if (!ownerA) throw new Error('Nu există un administrator în platformă')
@@ -108,6 +108,17 @@ Deno.serve(async (request) => {
         const { data: lastRuns } = await dbA.from('automation_runs').select('status, summary, created_at').eq('owner_id', ownerA.id).order('created_at', { ascending: false }).limit(3)
         return json({ daily_enabled: enabled, toggled_at: settingsA?.daily_toggled_at || null, last_runs: lastRuns || [] })
       }
+      if (input.action === 'log_cost') {
+        const amount = Number(input.amount)
+        if (!Number.isFinite(amount) || amount < 0 || amount > 5000) throw new HttpError(400, 'amount invalid')
+        const row = { owner_id: ownerA.id, spent_on: String(input.spent_on || new Date().toISOString().slice(0, 10)).slice(0, 10),
+          category: ['ai', 'subscription', 'ads', 'other'].includes(input.category) ? input.category : 'ai',
+          description: String(input.description || 'Cost marketing').slice(0, 200), amount,
+          currency: ['USD', 'EUR', 'RON'].includes(input.currency) ? input.currency : 'USD', source: 'claude', ref: input.ref ? String(input.ref).slice(0, 80) : null }
+        const { error: costError } = await dbA.from('marketing_costs').upsert(row, { onConflict: 'ref', ignoreDuplicates: true })
+        if (costError) throw costError
+        return json({ logged: true })
+      }
       const status = String(input.status || '')
       if (!['started', 'done', 'skipped', 'failed'].includes(status)) throw new HttpError(400, 'status invalid')
       const cost = Number(input.cost_usd)
@@ -116,6 +127,10 @@ Deno.serve(async (request) => {
         cost_usd: Number.isFinite(cost) && cost >= 0 ? Math.min(cost, 999) : null,
       })
       if (logError) throw logError
+      if (Number.isFinite(cost) && cost > 0) {
+        await dbA.from('marketing_costs').insert({ owner_id: ownerA.id, category: 'ai', description: `Clipuri zilnice · ${String(input.summary || '').slice(0, 120)}`,
+          amount: Math.min(cost, 999), currency: 'USD', source: 'daily' })
+      }
       return json({ logged: true, daily_enabled: enabled })
     }
 

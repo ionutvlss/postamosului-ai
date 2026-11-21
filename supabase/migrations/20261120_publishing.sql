@@ -145,3 +145,31 @@ alter table public.automation_settings add constraint automation_settings_tiktok
 alter table public.automation_settings add column if not exists tiktok_privacy text not null default 'PUBLIC_TO_EVERYONE';
 alter table public.automation_settings add column if not exists tiktok_allow_comments boolean not null default true;
 alter table public.automation_settings add column if not exists tiktok_consent_at timestamptz;
+
+-- Costurile platformei de marketing (generare AI, abonamente, reclame). Comenzile Poșta Moșului NU intră aici.
+create table if not exists public.marketing_costs (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  spent_on date not null default current_date,
+  category text not null default 'ai' check (category in ('ai','subscription','ads','other')),
+  description text not null,
+  amount numeric(10,2) not null check (amount >= 0),
+  currency text not null default 'USD' check (currency in ('USD','EUR','RON')),
+  source text not null default 'manual',
+  ref text unique,
+  created_at timestamptz not null default now()
+);
+create index if not exists marketing_costs_owner_date on public.marketing_costs (owner_id, spent_on desc);
+alter table public.marketing_costs enable row level security;
+drop policy if exists marketing_costs_admin on public.marketing_costs;
+create policy marketing_costs_admin on public.marketing_costs for all using (owner_id = auth.uid() and public.is_admin()) with check (owner_id = auth.uid() and public.is_admin());
+grant select, insert, update, delete on public.marketing_costs to authenticated;
+grant all on public.marketing_costs to service_role;
+
+-- Costuri de generare deja făcute pentru marketing (WaveSpeed, după istoricul de consum).
+insert into public.marketing_costs (owner_id, spent_on, category, description, amount, currency, source, ref)
+select p.id, v.d, 'ai', v.descr, v.amt, 'USD', 'wavespeed', v.ref
+from (select id from public.profiles where role = 'admin' order by created_at limit 1) p,
+     (values (date '2026-11-20', 'WaveSpeed · clipuri premium și afișe (voce, avatar, scene)', 1.15, 'wavespeed-2026-11-20'),
+             (date '2026-11-21', 'WaveSpeed · clip test complet + fundal Moș cu card (6 s)', 1.41, 'wavespeed-2026-11-21')) as v(d, descr, amt, ref)
+on conflict (ref) do nothing;

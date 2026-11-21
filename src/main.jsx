@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
-import { setDailyAutomation, listAutomationRuns, listComments, updateComment, commentsAction, listGroupDrafts, updateGroupDraft, updateGroupCandidate, deletePost, listPublishingSchedules, listSocialAccounts, publishNow, startConnect, createContentVariant, createGroupCandidate, createGroupOutreachDraft, createPost, deleteMedia, generateContent, getProfile, listAutomationSettings, listGroupCandidates, listMedia, listPosts, saveAutomationSettings, savePublishingSchedule, updatePost, updateProfile, uploadMedia } from './lib/api'
+import { listCosts, addCost, deleteCost, setDailyAutomation, listAutomationRuns, listComments, updateComment, commentsAction, listGroupDrafts, updateGroupDraft, updateGroupCandidate, deletePost, listPublishingSchedules, listSocialAccounts, publishNow, startConnect, createContentVariant, createGroupCandidate, createGroupOutreachDraft, createPost, deleteMedia, generateContent, getProfile, listAutomationSettings, listGroupCandidates, listMedia, listPosts, saveAutomationSettings, savePublishingSchedule, updatePost, updateProfile, uploadMedia } from './lib/api'
 
 const icons = { grid:'⌘', social:'◎', media:'▣', studio:'✦', calendar:'▦', groups:'♧', comments:'✉', analytics:'↗', settings:'⚙' }
 const nav = [
@@ -113,6 +113,7 @@ function Dashboard({name,posts,onNavigate,onNotice}){
   return <><PageTitle eyebrow={todayLabel({weekday:'long',day:'numeric',month:'long',year:'numeric'})} title={<>{new Date().getHours()<12?'Bună dimineața':new Date().getHours()<18?'Bună ziua':'Bună seara'}, {name} <span className="red">✦</span></>} desc="Ce ai de aprobat și ce urmează să se publice." action={<button className="primary" onClick={()=>onNavigate('Calendar editorial')}>Deschide aprobările</button>}/>
   <div className="stats"><Stat label="De aprobat" value={pending} change="necesită acțiune" tone="red" note="Calendar → De aprobat"/><Stat label="Programate" value={scheduledCount} change="aprobate" tone="gold" note="se publică automat"/><Stat label="Publicate" value={published} change="total" tone="green" note="pe toate platformele"/><Stat label="Eșuate" value={failed} change={failed?'de verificat':'nicio problemă'} tone={failed?'red':'green'} note="motivul apare în calendar"/></div>
   <TikTokInbox posts={raw} onNotice={onNotice}/>
+  <div className="insights-grid"><ViewsCard posts={raw}/><CostsCard onNotice={onNotice}/></div>
   <div className="dashboard-grid"><section className="card activity"><CardHead title="Postări în următoarele 14 zile"/><div className="chart"><div className="chart-labels"><span>{max}</span><span></span><span>{Math.round(max/2)}</span><span></span><span>0</span></div><div className="bars">{perDay.map((v,i)=><div className="bar-wrap" key={i} title={`${days[i].toLocaleDateString('ro-RO',{day:'numeric',month:'short'})}: ${v} postări`}><div className={i===0?'bar hot':'bar'} style={{height:`${Math.max(2,v/max*100)}%`}}></div></div>)}</div></div><div className="chart-days">{[0,3,6,9,13].map(i=><span key={i}>{days[i].toLocaleDateString('ro-RO',{day:'numeric',month:'short'})}</span>)}</div></section>
   <section className="card quick"><CardHead title="Acces rapid"/><Quick icon="✓" title="Aprobă clipurile" desc={`${pending} așteaptă`} onClick={()=>onNavigate('Calendar editorial')}/><Quick icon="▣" title="Media library" desc="Clipurile tale" onClick={()=>onNavigate('Media library')}/><Quick icon="◎" title="Conturi social" desc="Conectează rețelele" onClick={()=>onNavigate('Conturi social')}/></section></div>
   <section className="card schedule"><CardHead title="Următoarele postări" link="Deschide calendarul" onClick={()=>onNavigate('Calendar editorial')}/><div className="post-list">{upcoming.length?upcoming.map(p=><PostRow key={p.id} p={{...p,time:new Date(p.scheduled_for).toLocaleString('ro-RO',{weekday:'short',hour:'2-digit',minute:'2-digit'})}}/>):<p className="muted">Nu ai postări programate.</p>}</div></section></>}
@@ -125,6 +126,44 @@ function TikTokInbox({posts,onNotice}){
   return <section className="card tiktok-inbox"><CardHead title={`TikTok · de postat din Inbox (${items.length})`}/>
     <p className="muted">TikTok nu permite încă trimiterea descrierii odată cu clipul. Copiezi descrierea de aici, deschizi notificarea din aplicația TikTok, o lipești și apeși „Postează”.</p>
     <div className="tt-list">{items.map(p=><div className="tt-row" key={p.id}><div className="tt-main"><b>{p.title||'Clip'}</b><span>{(p.body||'').split('\n')[0].slice(0,110)}</span><small>trimis {new Date(p.published_at).toLocaleString('ro-RO',{weekday:'short',hour:'2-digit',minute:'2-digit'})}</small></div><button className="primary small" onClick={()=>copy(p)}>Copiază descrierea</button></div>)}</div>
+  </section>}
+const fmtN=n=>Number(n||0).toLocaleString('ro-RO')
+function ViewsCard({posts}){
+  const pub=posts.filter(p=>p.rawStatus==='published')
+  const plat=[['YouTube','youtube'],['Instagram','instagram'],['Facebook','facebook'],['TikTok','tiktok']]
+  const by=label=>pub.filter(p=>p.platform===label)
+  const sum=(list,k)=>list.reduce((a,p)=>a+Number(p.metadata?.stats?.[k]||0),0)
+  const total=sum(pub,'views'),likes=sum(pub,'likes'),comments=sum(pub,'comments')
+  const top=[...pub].filter(p=>p.metadata?.stats?.views).sort((a,b)=>b.metadata.stats.views-a.metadata.stats.views).slice(0,4)
+  const notes=[...new Set(pub.map(p=>p.metadata?.stats?.note).filter(Boolean))].slice(0,2)
+  const last=pub.map(p=>p.metadata?.stats?.at).filter(Boolean).sort().pop()
+  return <section className="card views-card"><CardHead title="Vizualizări"/>
+    <div className="big-number"><strong>{fmtN(total)}</strong><span>vizualizări pe clipurile publicate</span></div>
+    <div className="mini-stats"><span><b>{fmtN(likes)}</b> aprecieri</span><span><b>{fmtN(comments)}</b> comentarii</span><span><b>{pub.length}</b> postări</span></div>
+    <div className="plat-views">{plat.map(([label,key])=>{const list=by(label);const v=sum(list,'views');return <div key={key} className="plat-view"><span className={'platform '+(PLATFORM[key]?.color||'')}>{PLATFORM[key]?.icon}</span><div><b>{key==='tiktok'?'—':fmtN(v)}</b><small>{label} · {list.length} clipuri</small></div></div>})}</div>
+    {top.length>0&&<div className="top-clips"><small className="form-label">CELE MAI VĂZUTE</small>{top.map(p=><a key={p.id} className="top-clip" href={p.external_url||'#'} target="_blank" rel="noreferrer"><span>{p.title||'Clip'}</span><em>{p.platform}</em><b>{fmtN(p.metadata.stats.views)}</b></a>)}</div>}
+    <p className="muted">{last?`Actualizat ${new Date(last).toLocaleString('ro-RO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · se reîmprospătează la 2 ore.`:'Prima actualizare apare în maximum 10 minute.'} TikTok: vizualizările apar după activarea publicării directe.{notes.length?` ${notes.join(' · ')}.`:''}</p>
+  </section>}
+const RATE={USD:4.6,EUR:4.97,RON:1}
+const CAT={ai:'Generare AI',subscription:'Abonamente',ads:'Reclame',other:'Altele'}
+function CostsCard({onNotice}){
+  const [items,setItems]=useState([]),[open,setOpen]=useState(false),[form,setForm]=useState({description:'',amount:'',currency:'USD',category:'subscription',spent_on:localDay(new Date())})
+  const load=()=>listCosts().then(setItems).catch(()=>setItems([]))
+  useEffect(()=>{load()},[])
+  const ron=items.reduce((a,c)=>a+Number(c.amount)*(RATE[c.currency]||1),0)
+  const usd=ron/RATE.USD
+  const month=localDay(new Date()).slice(0,7)
+  const monthRon=items.filter(c=>String(c.spent_on).startsWith(month)).reduce((a,c)=>a+Number(c.amount)*(RATE[c.currency]||1),0)
+  const byCat=Object.keys(CAT).map(k=>[k,items.filter(c=>c.category===k).reduce((a,c)=>a+Number(c.amount)*(RATE[c.currency]||1),0)]).filter(([,v])=>v>0)
+  const save=async()=>{const amount=Number(String(form.amount).replace(',','.'));if(!form.description.trim()||!Number.isFinite(amount)||amount<0){onNotice('Completează descrierea și suma');return}try{await addCost({...form,description:form.description.trim(),amount});setForm(f=>({...f,description:'',amount:''}));setOpen(false);await load();onNotice('Cost adăugat')}catch(e){onNotice(`Nu am putut salva: ${e.message}`)}}
+  const remove=async c=>{if(!window.confirm(`Ștergi costul „${c.description}”?`))return;try{await deleteCost(c.id);await load()}catch(e){onNotice(e.message)}}
+  return <section className="card costs-card"><CardHead title="Costuri marketing"/>
+    <div className="big-number"><strong>{ron.toLocaleString('ro-RO',{maximumFractionDigits:0})} lei</strong><span>în total · ≈ {usd.toLocaleString('ro-RO',{maximumFractionDigits:2})} $ · luna aceasta {monthRon.toLocaleString('ro-RO',{maximumFractionDigits:0})} lei</span></div>
+    {byCat.length>0&&<div className="cat-bars">{byCat.map(([k,v])=><div key={k} className="cat-bar"><span>{CAT[k]}</span><i style={{width:`${Math.max(4,v/ron*100)}%`}}/><b>{v.toLocaleString('ro-RO',{maximumFractionDigits:0})} lei</b></div>)}</div>}
+    <div className="cost-list">{items.slice(0,6).map(c=><div key={c.id} className="cost-row"><div><b>{c.description}</b><small>{new Date(c.spent_on).toLocaleDateString('ro-RO',{day:'numeric',month:'short'})} · {CAT[c.category]}</small></div><em>{Number(c.amount).toLocaleString('ro-RO',{minimumFractionDigits:2})} {c.currency==='RON'?'lei':c.currency==='EUR'?'€':'$'}</em><button className="text-btn" title="Șterge" onClick={()=>remove(c)}>✕</button></div>)}{!items.length&&<p className="muted">Încă nu sunt costuri înregistrate.</p>}</div>
+    {open?<div className="cost-form"><input placeholder="ex. Abonament n8n" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/><div className="row"><input inputMode="decimal" placeholder="Sumă" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/><select value={form.currency} onChange={e=>setForm({...form,currency:e.target.value})}><option>USD</option><option>EUR</option><option>RON</option></select></div><div className="row"><select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{Object.entries(CAT).map(([k,l])=><option key={k} value={k}>{l}</option>)}</select><input type="date" value={form.spent_on} onChange={e=>setForm({...form,spent_on:e.target.value})}/></div><div className="row"><button className="outline small" onClick={()=>setOpen(false)}>Renunță</button><button className="primary small" onClick={save}>Salvează</button></div></div>
+    :<button className="outline small" onClick={()=>setOpen(true)}>＋ Adaugă un cost (abonament, reclame…)</button>}
+    <p className="muted">Doar costurile de marketing; clipurile comandate de clienți pe Poșta Moșului nu intră aici. Generările AI zilnice se adaugă singure. Curs aproximativ: 1 $ = 4,60 lei, 1 € = 4,97 lei.</p>
   </section>}
 function Stat({label,value,change,tone,note}){return <div className="stat"><span>{label}</span><div><strong>{value}</strong><em className={tone}>{change}</em></div><small>{note}</small></div>}
 function CardHead({title,link,onClick}){return <div className="card-head"><h2>{title}</h2>{link&&<button className="text-btn" onClick={onClick}>{link} →</button>}</div>}
