@@ -98,23 +98,23 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "serif",
-      "hook": "Cadoul de la nași|pe care *nu-l uită*",
-      "tts": "[warmly] Nașilor, vă ajut eu cu cadoul! [short pause] Îi trimit finului vostru un mesaj doar pentru el, cu numele lui... [short pause] și ajunge la părinți fix în dimineața de Crăciun. Poșta Moșului!",
+      "hook": "Video de la Moș Crăciun|*cu numele finului*",
+      "tts": "[warmly] Nași dragi, am cadoul perfect! [short pause] Un videoclip de la mine, în care îi vorbesc finului vostru pe nume. [short pause] Îl comandați în trei minute și ajunge fix în dimineața de Crăciun. Poșta Moșului!",
       "lines": [
-        "Nașilor, vă ajut eu cu cadoul!",
-        "Îi trimit finului vostru un mesaj doar pentru el,",
-        "cu numele lui...",
-        "și ajunge la părinți fix în dimineața de Crăciun.",
+        "Nași dragi, am cadoul perfect!",
+        "Un videoclip de la mine,",
+        "în care îi vorbesc finului vostru pe nume.",
+        "Îl comandați în trei minute și ajunge fix în dimineața de Crăciun.",
         "Poșta Moșului!"
       ],
       "highlight": [
-        "cadoul!",
-        "Crăciun.",
-        "Moșului!"
+        "perfect!",
+        "nume.",
+        "Crăciun."
       ],
-      "title": "Cadoul perfect de la nași pentru fin",
-      "caption": "Pentru nași, bunici și mătuși care vor să dăruiască ceva cu adevărat personal.\n\nBifați „Este un cadou” la comandă, iar videoclipul ajunge la părinți în dimineața de Crăciun, cu numele vostru pe el.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
-      "kicker": "Pentru nași",
+      "title": "Video de la Moș Crăciun cu numele finului",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nPentru nași, bunici și mătuși care vor să dăruiască ceva cu adevărat personal.\n\nBifați „Este un cadou” la comandă, iar videoclipul ajunge la părinți în dimineața de Crăciun, cu numele vostru pe el.\n\nComandă în 3 minute 👇",
+      "kicker": "Cadou de la nași",
       "end_title": "Un cadou|*care rămâne.*"
     },
     {
@@ -123,21 +123,22 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "serif",
-      "hook": "Departe de nepoți,|*aproape de Crăciun*",
-      "tts": "[warmly] Bunici dragi, dacă sunteți departe de nepoți anul acesta... [short pause] lăsați-mă pe mine să le duc vestea. Le vorbesc pe nume și le spun cât de mult îi iubiți. [short pause] Poșta Moșului.",
+      "hook": "Bunicii trimit|*un video de la Moș*",
+      "tts": "[warmly] Bunici dragi, sunteți departe de nepoți? [short pause] Comandați un videoclip de la mine, cu numele lor. Le spun cât îi iubiți, iar ei îl primesc pe email în mai puțin de o oră. [short pause] Poșta Moșului!",
       "lines": [
-        "Bunici dragi, dacă sunteți departe de nepoți anul acesta...",
-        "lăsați-mă pe mine să le duc vestea.",
-        "Le vorbesc pe nume",
-        "și le spun cât de mult îi iubiți.",
-        "Poșta Moșului."
+        "Bunici dragi, sunteți departe de nepoți?",
+        "Comandați un videoclip de la mine,",
+        "cu numele lor.",
+        "e spun cât îi iubiți, iar ei îl primesc pe email în mai puțin de o oră.",
+        "Poșta Moșului!"
       ],
       "highlight": [
-        "nepoți",
-        "iubiți."
+        "videoclip",
+        "iubiți,",
+        "oră."
       ],
-      "title": "Pentru bunicii care sunt departe de nepoți",
-      "caption": "Pentru bunicii care nu pot fi lângă nepoți de sărbători.\n\nMoș Crăciun le vorbește pe nume, iar videoclipul ajunge la părinți exact în ziua pe care o alegeți voi.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Bunicii trimit un video de la Moș",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nPentru bunicii care nu pot fi lângă nepoți de sărbători.\n\nMoș Crăciun le vorbește pe nume, iar videoclipul ajunge la părinți exact în ziua pe care o alegeți voi.\n\nComandă în 3 minute 👇",
       "kicker": "Pentru bunici",
       "end_title": "Oriunde ar fi,|*ajunge la timp.*"
     },
@@ -147,24 +148,22 @@
       "from": "2026-11-24",
       "to": "2026-12-06",
       "style": "editorial",
-      "hook": "În ghete, lângă dulciuri:|*un mesaj de la Moș*",
-      "tts": "[warmly] Anul acesta, de Moș Nicolae, puneți ceva special lângă dulciuri. [short pause] Un mesaj de la mine, în care îi spun copilului pe nume că am aflat cât de cuminte a fost. [short pause] Poșta Moșului!",
+      "hook": "Pune în ghete|*un video de la Moș*",
+      "tts": "[warmly] De Moș Nicolae, puneți în ghete mai mult decât dulciuri! [short pause] Un videoclip de la mine, cu numele copilului, gata în mai puțin de o oră. [short pause] De la 39 de lei, pe Poșta Moșului!",
       "lines": [
-        "Anul acesta, de Moș Nicolae,",
-        "puneți ceva special lângă dulciuri.",
-        "Un mesaj de la mine,",
-        "în care îi spun copilului pe nume",
-        "că am aflat cât de cuminte a fost.",
-        "Poșta Moșului!"
+        "e Moș Nicolae, puneți în ghete mai mult decât dulciuri!",
+        "Un videoclip de la mine, cu numele copilului,",
+        "gata în mai puțin de o oră.",
+        "De la 39 de lei, pe Poșta Moșului!"
       ],
       "highlight": [
-        "Nicolae,",
-        "special",
-        "cuminte"
+        "ghete",
+        "videoclip",
+        "39"
       ],
-      "title": "Ce să pui în ghete de Moș Nicolae anul acesta",
-      "caption": "În noaptea de 5 spre 6 decembrie, lăsați lângă dulciuri un bilețel: „Moș Crăciun are ceva să-ți spună.”\n\nDimineața, puneți-i videoclipul. Restul e magie.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
-      "kicker": "6 decembrie",
+      "title": "Pune în ghete un video de la Moș",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nÎn noaptea de 5 spre 6 decembrie, lăsați lângă dulciuri un bilețel: „Moș Crăciun are ceva să-ți spună.”\n\nDimineața, puneți-i videoclipul. Restul e magie.\n\nComandă în 3 minute 👇",
+      "kicker": "Pentru 6 decembrie",
       "end_title": "Magia începe|*de la ghete.*"
     },
     {
@@ -173,22 +172,21 @@
       "from": "2026-12-04",
       "to": "2026-12-05",
       "style": "serif",
-      "hook": "Mâine vine|*Moș Nicolae*",
-      "tts": "[excited] Mâine seară vine Moș Nicolae! [short pause] Încă nu e târziu: comandați acum și în mai puțin de o oră aveți mesajul meu pentru copil, cu numele lui. [short pause] Poșta Moșului!",
+      "hook": "Mâine e Moș Nicolae.|*Video gata într-o oră.*",
+      "tts": "[excited] Mâine seară vine Moș Nicolae! [short pause] Comandați acum un videoclip de la mine, cu numele copilului, și îl aveți pe email în mai puțin de o oră. [short pause] Poșta Moșului!",
       "lines": [
         "Mâine seară vine Moș Nicolae!",
-        "Încă nu e târziu:",
-        "comandați acum și în mai puțin de o oră",
-        "aveți mesajul meu pentru copil, cu numele lui.",
+        "Comandați acum un videoclip de la mine,",
+        "cu numele copilului, și îl aveți pe email în mai puțin de o oră.",
         "Poșta Moșului!"
       ],
       "highlight": [
         "Mâine",
-        "oră",
-        "Moșului!"
+        "acum",
+        "oră."
       ],
-      "title": "Mâine seară vine Moș Nicolae",
-      "caption": "Ghetele sunt pregătite, dar lipsește surpriza?\n\nVideoclipul personalizat ajunge pe email în mai puțin de o oră, chiar și în seara asta.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Mâine e Moș Nicolae. Video gata într-o oră.",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nGhetele sunt pregătite, dar lipsește surpriza?\n\nVideoclipul personalizat ajunge pe email în mai puțin de o oră, chiar și în seara asta.\n\nComandă în 3 minute 👇",
       "kicker": "Mâine seară",
       "end_title": "Încă e|*timp.*"
     },
@@ -198,22 +196,21 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "serif",
-      "hook": "I-a scris Moșului.|*Moșul îi răspunde.*",
-      "tts": "[warmly] Copilul vostru mi-a scris o scrisoare? [short pause] Atunci merită un răspuns! Îi spun că am primit-o, îi zic pe nume și vorbim despre ce și-a dorit. [short pause] Poșta Moșului.",
+      "hook": "Moșul îi răspunde|*la scrisoare, în video*",
+      "tts": "[warmly] Copilul vostru mi-a scris o scrisoare? [short pause] Îi răspund printr-un videoclip, pe nume, despre tot ce și-a dorit. [short pause] Comandați în trei minute, pe Poșta Moșului!",
       "lines": [
         "Copilul vostru mi-a scris o scrisoare?",
-        "Atunci merită un răspuns!",
-        "Îi spun că am primit-o, îi zic pe nume",
-        "și vorbim despre ce și-a dorit.",
-        "Poșta Moșului."
+        "Îi răspund printr-un videoclip,",
+        "pe nume, despre tot ce și-a dorit.",
+        "Comandați în trei minute, pe Poșta Moșului!"
       ],
       "highlight": [
         "scrisoare?",
-        "răspuns!",
-        "dorit."
+        "videoclip,",
+        "trei"
       ],
-      "title": "I-a scris Moșului? Moșul îi răspunde",
-      "caption": "Cea mai frumoasă parte a unei scrisori este răspunsul.\n\nFolosiți chiar ce a scris copilul, iar Moș Crăciun îi răspunde într-un videoclip doar al lui.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Moșul îi răspunde la scrisoare, în video",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nCea mai frumoasă parte a unei scrisori este răspunsul.\n\nFolosiți chiar ce a scris copilul, iar Moș Crăciun îi răspunde într-un videoclip doar al lui.\n\nComandă în 3 minute 👇",
       "kicker": "Răspunsul Moșului",
       "end_title": "Fiecare scrisoare|*merită un răspuns.*"
     },
@@ -223,23 +220,23 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "editorial",
-      "hook": "Comanzi acum.|*Îl ai într-o oră.*",
-      "tts": "[warmly] Trei minute completați formularul. [short pause] Eu mă apuc imediat de treabă. Și în mai puțin de o oră, mesajul meu e pe emailul vostru. [chuckles] Renii mei sunt rapizi! Poșta Moșului.",
+      "hook": "Video de la Moș Crăciun|*gata într-o oră*",
+      "tts": "[warmly] Vreți un videoclip de la Moș Crăciun pentru copilul vostru? [short pause] Completați formularul în trei minute, iar în mai puțin de o oră e pe email. [chuckles] Renii mei sunt rapizi! Poșta Moșului.",
       "lines": [
-        "Trei minute completați formularul.",
-        "Eu mă apuc imediat de treabă.",
-        "Și în mai puțin de o oră,",
-        "mesajul meu e pe emailul vostru.",
-        "Renii mei sunt rapizi! Poșta Moșului."
+        "Vreți un videoclip de la Moș Crăciun pentru copilul vostru?",
+        "Completați formularul în trei minute,",
+        "iar în mai puțin de o oră e pe email.",
+        "Renii mei sunt rapizi!",
+        "Poșta Moșului."
       ],
       "highlight": [
-        "minute",
-        "oră,",
-        "rapizi!"
+        "videoclip",
+        "trei",
+        "oră"
       ],
-      "title": "Comanzi acum, îl ai într-o oră",
-      "caption": "Trei minute ca să completați detaliile, mai puțin de o oră până ajunge pe email.\n\nFără cont. Plată cu cardul, Apple Pay sau Google Pay.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
-      "kicker": "Simplu și rapid",
+      "title": "Video de la Moș Crăciun gata într-o oră",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nTrei minute ca să completați detaliile, mai puțin de o oră până ajunge pe email.\n\nFără cont. Plată cu cardul, Apple Pay sau Google Pay.\n\nComandă în 3 minute 👇",
+      "kicker": "Gata într-o oră",
       "end_title": "Gata|*în sub o oră.*"
     },
     {
@@ -248,22 +245,22 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "serif",
-      "hook": "Doi copii,|*un singur mesaj*",
-      "tts": "[warmly] Aveți doi copii acasă? [short pause] Nu-i nicio problemă! Vorbesc cu amândoi în același mesaj, pe rând, cu numele fiecăruia. [short pause] Nimeni nu rămâne pe dinafară. Poșta Moșului!",
+      "hook": "Video de la Moș|*pentru doi copii*",
+      "tts": "[warmly] Aveți doi copii? [short pause] Le fac un singur videoclip, în care vorbesc cu fiecare pe nume. Al doilea copil costă doar 15 lei în plus. [short pause] Poșta Moșului!",
       "lines": [
-        "Aveți doi copii acasă?",
-        "Nu-i nicio problemă!",
-        "Vorbesc cu amândoi în același mesaj,",
-        "pe rând, cu numele fiecăruia.",
-        "Nimeni nu rămâne pe dinafară. Poșta Moșului!"
+        "Aveți doi copii?",
+        "Le fac un singur videoclip,",
+        "în care vorbesc cu fiecare pe nume.",
+        "Al doilea copil costă doar 15 lei în plus.",
+        "Poșta Moșului!"
       ],
       "highlight": [
         "doi",
-        "amândoi",
-        "fiecăruia."
+        "nume.",
+        "15"
       ],
-      "title": "Doi copii, un singur mesaj de la Moș",
-      "caption": "Frații primesc mesajul împreună.\n\nAdăugați al doilea copil la comandă (+15 lei), iar Moș Crăciun vorbește cu amândoi, pe nume.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Video de la Moș pentru doi copii",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nFrații primesc mesajul împreună.\n\nAdăugați al doilea copil la comandă (+15 lei), iar Moș Crăciun vorbește cu amândoi, pe nume.\n\nComandă în 3 minute 👇",
       "kicker": "Pentru frați",
       "end_title": "Împreună,|*pe nume.*"
     },
@@ -273,22 +270,21 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "editorial",
-      "hook": "Începe să nu mai creadă|*în Moș Crăciun?*",
-      "tts": "[softly] Copilul vostru a început să se îndoiască de mine? [short pause] Lăsați-mă să-i spun ceva ce doar Moșul ar putea ști. [short pause] O să mai creadă încă un an. Poșta Moșului.",
+      "hook": "Începe să nu mai creadă?|*Moșul îi vorbește pe nume*",
+      "tts": "[softly] Copilul vostru a început să se îndoiască de mine? [short pause] Comandați un videoclip în care îi spun pe nume lucruri pe care doar Moșul le-ar ști. [short pause] O să mai creadă încă un an. Poșta Moșului.",
       "lines": [
         "Copilul vostru a început să se îndoiască de mine?",
-        "Lăsați-mă să-i spun ceva",
-        "ce doar Moșul ar putea ști.",
+        "Comandați un videoclip în care îi spun pe nume lucruri pe care doar Moșul le-ar ști.",
         "O să mai creadă încă un an.",
         "Poșta Moșului."
       ],
       "highlight": [
-        "îndoiască",
-        "ști.",
+        "videoclip",
+        "nume",
         "creadă"
       ],
-      "title": "Când începe să nu mai creadă în Moș Crăciun",
-      "caption": "Prietenul cel mai bun, primul dinte căzut, dorința secretă.\n\nDetaliile pe care doar voi le știți devin magie atunci când le spune Moș Crăciun.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Începe să nu mai creadă? Moșul îi vorbește pe nume",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nPrietenul cel mai bun, primul dinte căzut, dorința secretă.\n\nDetaliile pe care doar voi le știți devin magie atunci când le spune Moș Crăciun.\n\nComandă în 3 minute 👇",
       "kicker": "Încă un an de magie",
       "end_title": "Încă un Crăciun|*în care crede.*"
     },
@@ -298,23 +294,22 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "editorial",
-      "hook": "Mai puțin decât o jucărie.|*Ține o viață.*",
-      "tts": "[warmly] O jucărie se strică până în februarie. [short pause] Momentul în care Moșul îi spune copilului pe nume că a fost cuminte... rămâne pentru totdeauna. [short pause] De la 39 de lei, pe Poșta Moșului.",
+      "hook": "Video de la Moș Crăciun,|*mai ieftin ca o jucărie*",
+      "tts": "[warmly] O jucărie se strică până în februarie. [short pause] Un videoclip în care îi spun copilului pe nume că a fost cuminte... rămâne pentru totdeauna. [short pause] De la 39 de lei, pe Poșta Moșului!",
       "lines": [
         "O jucărie se strică până în februarie.",
-        "Momentul în care Moșul îi spune copilului pe nume",
-        "că a fost cuminte...",
+        "Un videoclip în care îi spun copilului pe nume că a fost cuminte...",
         "rămâne pentru totdeauna.",
-        "De la 39 de lei, pe Poșta Moșului."
+        "De la 39 de lei, pe Poșta Moșului!"
       ],
       "highlight": [
-        "februarie.",
+        "videoclip",
         "totdeauna.",
         "39"
       ],
-      "title": "Mai puțin decât o jucărie, ține o viață",
-      "caption": "Jucăriile se strică. Amintirile rămân.\n\nUn videoclip în care Moș Crăciun îi vorbește copilului vostru pe nume, de păstrat ani la rând.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
-      "kicker": "Cadoul care rămâne",
+      "title": "Video de la Moș Crăciun, mai ieftin ca o jucărie",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nJucăriile se strică. Amintirile rămân.\n\nUn videoclip în care Moș Crăciun îi vorbește copilului vostru pe nume, de păstrat ani la rând.\n\nComandă în 3 minute 👇",
+      "kicker": "De la 39 lei",
       "end_title": "Un cadou|*care nu se uită.*"
     },
     {
@@ -323,22 +318,22 @@
       "from": "2026-12-20",
       "to": "2026-12-24",
       "style": "serif",
-      "hook": "Ai uitat de cadou?|*Încă e timp.*",
-      "tts": "[warmly] V-a prins Ajunul nepregătiți? [chuckles] Se întâmplă și la Polul Nord! [short pause] Comandați acum și în mai puțin de o oră aveți mesajul meu pentru copil, chiar și azi. Poșta Moșului!",
+      "hook": "Video de la Moș,|*chiar și în Ajun*",
+      "tts": "[warmly] V-a prins Ajunul fără cadou? [chuckles] Se întâmplă și la Polul Nord! [short pause] Comandați acum un videoclip de la mine, cu numele copilului, și îl aveți în mai puțin de o oră. Poșta Moșului!",
       "lines": [
-        "V-a prins Ajunul nepregătiți?",
+        "V-a prins Ajunul fără cadou?",
         "Se întâmplă și la Polul Nord!",
-        "Comandați acum și în mai puțin de o oră",
-        "aveți mesajul meu pentru copil, chiar și azi.",
+        "Comandați acum un videoclip de la mine,",
+        "cu numele copilului, și îl aveți în mai puțin de o oră.",
         "Poșta Moșului!"
       ],
       "highlight": [
         "Ajunul",
-        "oră",
-        "azi."
+        "acum",
+        "oră."
       ],
-      "title": "Cadou de ultim moment: gata într-o oră",
-      "caption": "Cadoul de ultim moment care nu pare deloc de ultim moment.\n\nGata în mai puțin de o oră, chiar și în Ajun.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Video de la Moș, chiar și în Ajun",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nCadoul de ultim moment care nu pare deloc de ultim moment.\n\nGata în mai puțin de o oră, chiar și în Ajun.\n\nComandă în 3 minute 👇",
       "kicker": "Ultimul moment",
       "end_title": "Gata|*într-o oră.*"
     },
@@ -348,22 +343,22 @@
       "from": "2026-12-10",
       "to": "2026-12-24",
       "style": "editorial",
-      "hook": "Trucul părinților|*pentru seara de Ajun*",
-      "tts": "[warmly] Un secret pentru seara de Ajun: [short pause] chiar înainte de cadouri, puneți mesajul meu pe televizor. Copilul își aude numele... și toată casa se oprește. [short pause] Poșta Moșului.",
+      "hook": "Trucul de Ajun:|*video de la Moș, pe TV*",
+      "tts": "[warmly] Un secret pentru seara de Ajun: [short pause] puneți pe televizor videoclipul meu, în care îi vorbesc copilului pe nume. Toată casa se oprește. [short pause] Comandați-l pe Poșta Moșului!",
       "lines": [
         "Un secret pentru seara de Ajun:",
-        "chiar înainte de cadouri,",
-        "puneți mesajul meu pe televizor.",
-        "Copilul își aude numele...",
-        "și toată casa se oprește. Poșta Moșului."
+        "puneți pe televizor videoclipul meu,",
+        "în care îi vorbesc copilului pe nume.",
+        "Toată casa se oprește.",
+        "Comandați-l pe Poșta Moșului!"
       ],
       "highlight": [
-        "Ajun:",
-        "televizor.",
-        "numele..."
+        "secret",
+        "televizor",
+        "nume."
       ],
-      "title": "Trucul părinților pentru seara de Ajun",
-      "caption": "Puneți videoclipul pe televizor chiar înainte de cadouri.\n\nȘi nu uitați să filmați reacția.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Trucul de Ajun: video de la Moș, pe TV",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nPuneți videoclipul pe televizor chiar înainte de cadouri.\n\nȘi nu uitați să filmați reacția.\n\nComandă în 3 minute 👇",
       "kicker": "Seara de Ajun",
       "end_title": "O seară|*de neuitat.*"
     },
@@ -373,23 +368,22 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "editorial",
-      "hook": "Fără poze cu copilul.|*Fără cont.*",
-      "tts": "[warmly] Nu vă cer poze cu copilul și nici să vă faceți cont. [short pause] Îmi spuneți doar câteva lucruri despre el, iar după 30 de zile le șterg. [short pause] Simplu și în siguranță. Poșta Moșului.",
+      "hook": "Video de la Moș Crăciun.|*Fără poze, fără cont.*",
+      "tts": "[warmly] Pentru videoclipul meu nu vă cer poze cu copilul și nici cont. [short pause] Îmi spuneți doar câteva lucruri despre el, iar în mai puțin de o oră îl primiți pe email. [short pause] Poșta Moșului.",
       "lines": [
-        "Nu vă cer poze cu copilul",
-        "și nici să vă faceți cont.",
+        "Pentru videoclipul meu nu vă cer poze cu copilul și nici cont.",
         "Îmi spuneți doar câteva lucruri despre el,",
-        "iar după 30 de zile le șterg.",
-        "Simplu și în siguranță. Poșta Moșului."
+        "iar în mai puțin de o oră îl primiți pe email.",
+        "Poșta Moșului."
       ],
       "highlight": [
         "poze",
         "cont.",
-        "siguranță."
+        "oră"
       ],
-      "title": "Fără poze cu copilul, fără cont",
-      "caption": "Nu cerem fotografii și nu trebuie să vă faceți cont.\n\nDetaliile despre copil se șterg la 30 de zile după livrare.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
-      "kicker": "Discreție",
+      "title": "Video de la Moș Crăciun. Fără poze, fără cont.",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nNu cerem fotografii și nu trebuie să vă faceți cont.\n\nDetaliile despre copil se șterg la 30 de zile după livrare.\n\nComandă în 3 minute 👇",
+      "kicker": "Simplu și sigur",
       "end_title": "Simplu|*și discret.*"
     },
     {
@@ -398,23 +392,23 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "serif",
-      "hook": "Când îi spune Moșul,|*se ascultă altfel*",
-      "tts": "[warmly] Copilul vostru are o mică provocare? Să doarmă singur, să-și strângă jucăriile? [short pause] Lăsați-mă pe mine să-i spun, cu blândețe. De la Moș se ascultă altfel! [chuckles] Poșta Moșului.",
+      "hook": "Moșul îi dă un sfat,|*pe nume, în video*",
+      "tts": "[warmly] Copilul vostru nu vrea să doarmă singur sau să-și strângă jucăriile? [short pause] Îi spun eu, cu blândețe, într-un videoclip doar pentru el. De la Moș se ascultă altfel! [chuckles] Poșta Moșului.",
       "lines": [
-        "Copilul vostru are o mică provocare?",
-        "Să doarmă singur, să-și strângă jucăriile?",
-        "Lăsați-mă pe mine să-i spun, cu blândețe.",
+        "Copilul vostru nu vrea să doarmă singur sau să-și strângă jucăriile?",
+        "Îi spun eu, cu blândețe,",
+        "într-un videoclip doar pentru el.",
         "De la Moș se ascultă altfel!",
         "Poșta Moșului."
       ],
       "highlight": [
-        "provocare?",
-        "blândețe.",
+        "singur",
+        "videoclip",
         "altfel!"
       ],
-      "title": "Când Moșul îi spune, se ascultă altfel",
-      "caption": "Puteți adăuga un îndemn blând: să doarmă singur, să-și strângă jucăriile, să fie cuminte cu frățiorul.\n\nDe la Moș Crăciun, se ascultă altfel.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
-      "kicker": "Un îndemn blând",
+      "title": "Moșul îi dă un sfat, pe nume, în video",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nPuteți adăuga un îndemn blând: să doarmă singur, să-și strângă jucăriile, să fie cuminte cu frățiorul.\n\nDe la Moș Crăciun, se ascultă altfel.\n\nComandă în 3 minute 👇",
+      "kicker": "Un sfat de la Moș",
       "end_title": "Un sfat|*de la Moș.*"
     },
     {
@@ -423,21 +417,22 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "serif",
-      "hook": "O mie de scrisori.|*Timp pentru fiecare.*",
-      "tts": "[chuckles] Spiridușii zic că am prea multe scrisori anul acesta. [short pause] Dar pentru copilul vostru găsesc mereu timp. Îi spun pe nume, îi spun că-l știu... [short pause] Poșta Moșului.",
+      "hook": "Video personalizat|*de la Polul Nord*",
+      "tts": "[chuckles] Spiridușii zic că am prea multe scrisori anul acesta! [short pause] Dar pentru copilul vostru fac un videoclip doar al lui, cu numele lui. Gata în mai puțin de o oră. [short pause] Poșta Moșului.",
       "lines": [
-        "Spiridușii zic că am prea multe scrisori anul acesta.",
-        "Dar pentru copilul vostru găsesc mereu timp.",
-        "Îi spun pe nume, îi spun că-l știu...",
+        "Spiridușii zic că am prea multe scrisori anul acesta!",
+        "Dar pentru copilul vostru fac un videoclip doar al lui,",
+        "cu numele lui.",
+        "Gata în mai puțin de o oră.",
         "Poșta Moșului."
       ],
       "highlight": [
-        "Spiridușii",
-        "timp.",
-        "nume,"
+        "videoclip",
+        "numele",
+        "oră."
       ],
-      "title": "Moșul are mereu timp pentru copilul tău",
-      "caption": "Oricât de aglomerat ar fi la Polul Nord, mesajul pentru copilul vostru este doar al lui.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Video personalizat de la Polul Nord",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nOricât de aglomerat ar fi la Polul Nord, mesajul pentru copilul vostru este doar al lui.\n\nComandă în 3 minute 👇",
       "kicker": "De la Polul Nord",
       "end_title": "Doar pentru|*copilul tău.*"
     },
@@ -447,22 +442,22 @@
       "from": "2026-12-01",
       "to": "2026-12-24",
       "style": "editorial",
-      "hook": "Ajunge în|*dimineața de Crăciun*",
-      "tts": "[warmly] Vreți ca mesajul meu să ajungă fix în dimineața de Crăciun, la ora opt? [short pause] Alegeți asta la comandă și eu am grijă de restul. Perfect pentru nași și bunici. Poșta Moșului!",
+      "hook": "Video de la Moș,|*livrat de Crăciun la 8:00*",
+      "tts": "[warmly] Vreți ca videoclipul meu să ajungă fix în dimineața de Crăciun? [short pause] Comandați acum, alegeți data, și eu îl trimit la ora opt. Perfect pentru nași și bunici! Poșta Moșului.",
       "lines": [
-        "Vreți ca mesajul meu să ajungă fix în dimineața de Crăciun,",
-        "la ora opt?",
-        "Alegeți asta la comandă și eu am grijă de restul.",
-        "Perfect pentru nași și bunici.",
-        "Poșta Moșului!"
+        "Vreți ca videoclipul meu să ajungă fix în dimineața de Crăciun?",
+        "Comandați acum, alegeți data,",
+        "și eu îl trimit la ora opt.",
+        "Perfect pentru nași și bunici!",
+        "Poșta Moșului."
       ],
       "highlight": [
-        "Crăciun,",
-        "opt?",
-        "bunici."
+        "Crăciun?",
+        "data,",
+        "opt."
       ],
-      "title": "Livrat în dimineața de Crăciun, la 8:00",
-      "caption": "Comandați azi, iar videoclipul ajunge pe 25 decembrie, la ora 8:00.\n\nPotrivit pentru cadourile de la nași și bunici.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Video de la Moș, livrat de Crăciun la 8:00",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nComandați azi, iar videoclipul ajunge pe 25 decembrie, la ora 8:00.\n\nPotrivit pentru cadourile de la nași și bunici.\n\nComandă în 3 minute 👇",
       "kicker": "25 decembrie, 8:00",
       "end_title": "Livrat|*la 8:00.*"
     },
@@ -472,22 +467,22 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "serif",
-      "hook": "Un an din viața lui,|*povestit de Moș*",
-      "tts": "[softly] Primul dinte căzut. Prima zi de școală. Prima bicicletă fără roți ajutătoare. [short pause] Spuneți-mi anul lui, și eu i-l povestesc... ca Moș Crăciun. Poșta Moșului.",
+      "hook": "Moșul îi povestește anul|*într-un video, pe nume*",
+      "tts": "[softly] Primul dinte căzut. Prima zi de școală. [short pause] Spuneți-mi anul copilului vostru, iar eu i-l povestesc într-un videoclip, cu numele lui. [short pause] De la 39 de lei, pe Poșta Moșului.",
       "lines": [
         "Primul dinte căzut.",
         "Prima zi de școală.",
-        "Prima bicicletă fără roți ajutătoare.",
-        "Spuneți-mi anul lui,",
-        "și eu i-l povestesc... ca Moș Crăciun. Poșta Moșului."
+        "Spuneți-mi anul copilului vostru,",
+        "iar eu i-l povestesc într-un videoclip, cu numele lui.",
+        "De la 39 de lei, pe Poșta Moșului."
       ],
       "highlight": [
         "dinte",
-        "școală.",
-        "bicicletă"
+        "videoclip,",
+        "39"
       ],
-      "title": "Un an din viața lui, povestit de Moș Crăciun",
-      "caption": "Pachetul de 90 de secunde este povestea completă a anului lui, spusă de Moș Crăciun: realizările, prietenii, familia și dorința de Crăciun.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "title": "Moșul îi povestește anul într-un video, pe nume",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nPachetul de 90 de secunde este povestea completă a anului lui, spusă de Moș Crăciun: realizările, prietenii, familia și dorința de Crăciun.\n\nComandă în 3 minute 👇",
       "kicker": "Povestea anului",
       "end_title": "Povestea lui,|*spusă de Moș.*"
     },
@@ -497,22 +492,21 @@
       "from": "2026-11-20",
       "to": "2026-12-24",
       "style": "editorial",
-      "hook": "Ascultă cum îi spune|*Moșul pe nume*",
-      "tts": "[warmly] Nu sunteți siguri? [short pause] Intrați pe site, scrieți numele copilului și ascultați gratuit cum îl spun eu. [chuckles] Vă garantez că o să zâmbiți. Poșta Moșului!",
+      "hook": "Ascultă gratuit|*cum îi spune Moșul pe nume*",
+      "tts": "[warmly] Vreți un videoclip de la mine pentru copilul vostru? [short pause] Intrați pe site, scrieți-i numele și ascultați gratuit cum îl spun. [chuckles] Apoi comandați în trei minute. Poșta Moșului!",
       "lines": [
-        "Nu sunteți siguri?",
-        "Intrați pe site, scrieți numele copilului",
-        "și ascultați gratuit cum îl spun eu.",
-        "Vă garantez că o să zâmbiți.",
+        "Vreți un videoclip de la mine pentru copilul vostru?",
+        "ntrați pe site, scrieți-i numele și ascultați gratuit cum îl spun.",
+        "Apoi comandați în trei minute.",
         "Poșta Moșului!"
       ],
       "highlight": [
+        "videoclip",
         "gratuit",
-        "numele",
-        "zâmbiți."
+        "trei"
       ],
       "title": "Ascultă gratuit cum îi spune Moșul pe nume",
-      "caption": "Scrieți numele copilului pe postamosului.ro și ascultați gratuit cum îl rostește Moș Crăciun.\n\nVideoclip personalizat · de la 39 lei · gata în sub o oră",
+      "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nScrieți numele copilului pe postamosului.ro și ascultați gratuit cum îl rostește Moș Crăciun.\n\nComandă în 3 minute 👇",
       "kicker": "Încearcă gratuit",
       "end_title": "Ascultă|*gratuit.*"
     }

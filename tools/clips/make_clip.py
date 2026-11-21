@@ -33,6 +33,7 @@ import brand as B
 W, H = 1080, 1920
 HOOK_END = 2.9
 END_LEN = 2.8
+TAIL = 0.9  # pauză după ultimul cuvânt, înainte de cardul final
 
 
 def ass_color(rgb, alpha=0):
@@ -341,15 +342,20 @@ def main():
     ap.add_argument("--no-snow", action="store_true")
     a = ap.parse_args()
     spec = json.load(open(a.spec, encoding="utf-8"))
-    total = duration(a.video)
-    end_start = max(0.0, total - min(END_LEN, total * 0.25)) if spec.get("cta", "POSTAMOSULUI.RO") else total
-    hook_end = min(HOOK_END, end_start)
+    total_in = duration(a.video)
     with tempfile.TemporaryDirectory() as tmp:
         audio = a.voice
         if not audio:
             audio = os.path.join(tmp, "a.wav")
             run(["ffmpeg", "-y", "-i", a.video, "-vn", "-ac", "1", "-ar", "16000", audio])
-        speech = speech_intervals(audio, min(total, duration(audio)))
+        speech = speech_intervals(audio, min(total_in, duration(audio)))
+        # Moșul își termină fraza pe ecran (+ o respirație), abia apoi vine cardul final; clipul se prelungește cât e nevoie.
+        if spec.get("cta", "POSTAMOSULUI.RO"):
+            end_start = min(total_in, speech[-1][1] + TAIL)
+            total = max(total_in, end_start + END_LEN)
+        else:
+            end_start = total = total_in
+        hook_end = min(HOOK_END, end_start)
         words = word_timings(spec["lines"], speech)
         ass = os.path.join(tmp, "subs.ass")
         open(ass, "w", encoding="utf-8").write(build_ass(spec, words, total, end_start))
@@ -367,7 +373,8 @@ def main():
         endfx = f"gblur=sigma=22:enable='gte(t,{end_start:.2f})'"
         inputs = ["-i", a.video]
 
-        chain = [f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},{zoom}{grade},{endfx}[v0]"]
+        pad = f"tpad=stop_mode=clone:stop_duration={total - total_in + 0.1:.2f}," if total > total_in + 0.01 else ""
+        chain = [f"[0:v]{pad}scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},{zoom}{grade},{endfx}[v0]"]
         idx, last = 1, "v0"
 
         def add(label_in, file, filt, pos="0:0", enable=None):
@@ -403,7 +410,7 @@ def main():
         chain.append(f"[{last}]format=yuv420p[v]")
 
         run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *inputs, "-filter_complex", ";".join(chain), "-map", "[v]", "-map", "0:a",
-             "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-r", "25",
+             "-af", "apad,loudnorm=I=-14:TP=-1.5:LRA=11", "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-r", "25",
              "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-t", f"{total:.2f}", a.out])
     print(json.dumps({"out": a.out, "duration": round(total, 2), "words": len(words), "speech_segments": len(speech)}))
 

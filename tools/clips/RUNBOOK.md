@@ -16,6 +16,9 @@ Instagram Reels și YouTube Shorts, în „De aprobat”, la sloturile 1 și 2 a
 ## 1. Alege scripturile
 - Din `tools/clips/scripts.json`: 2 scripturi fără `used`, cu data de azi între `from` și `to`.
 - Preferă unghiuri și stiluri diferite între cele două; scripturile cu fereastră scurtă (Moș Nicolae, Ajun) au prioritate.
+- **Ton de vânzare:** din primele 2 secunde se înțelege produsul („videoclip de la Moș Crăciun, cu numele copilului”).
+  Hook-ul spune produsul + beneficiul; vocea se încheie cu un îndemn clar („Comandați…”, „De la 39 de lei, pe Poșta Moșului”);
+  caption-ul începe cu rândul de produs (vezi scripturile existente). Fără promisiuni false.
 - Dacă rămân sub 2 disponibile: scrie altele noi în același format (public: părinții; 25–35 de cuvinte;
   fără promisiuni false; fapte reale: de la 39 lei, gata de obicei în sub o oră, fără cont, fără poze,
   al doilea copil +15 lei, opțiunea de cadou cu livrare programată) și adaugă-le în bancă.
@@ -31,6 +34,8 @@ Instagram Reels și YouTube Shorts, în „De aprobat”, la sloturile 1 și 2 a
 - Dacă `run_model` dă eroare de rețea: verifică `list_predictions` înainte să retrimiți (nu plăti de două ori).
 
 ## 4. Editarea
+`make_clip.py` lasă singur ~0,9 s după ultimul cuvânt (Moșul își termină fraza pe ecran), apoi cardul final de 2,8 s;
+clipul iese cu ~3 s mai lung decât vocea (ținta 15–18 s). Nu tăia finalul.
 ```bash
 python3 tools/clips/make_clip.py --video avatar.mp4 --spec spec.json --out clip.mp4
 ```
@@ -99,3 +104,13 @@ sociale + 5 ciorne pentru grupuri, cu același clip.
 
 Platforma alege singură cele 5 grupuri (cele mai de mult nefolosite, niciunul de două ori în 6 zile) și le pune în
 „Grupuri Facebook → De postat azi”. Dacă sunt mai puține grupuri disponibile, creează doar câte încap.
+
+## 8. Clip-card (5–6 s, fără voce)
+Moșul ține un card crem cu ramă aurie și arată spre el, iar oferta apare rând cu rând pe card.
+- Fundalul refolosibil: `media/scene/mos-card.mp4` (Seedance 2.0 mini, cameră fixă, cardul nemișcat; zona de text pe card,
+  în pixelii clipului sursă 728×1268: `box: [105, 600, 645, 1170]`). Un fundal nou costă ~0,45 $ (imagine Seedream 5.5 Edit
+  cu Moșul aplecat peste un card gol + animație 6 s); refolosește-l pe cel existent cât mai mult.
+- `python3 tools/clips/make_card.py --video mos-card.mp4 --spec card.json --out card.mp4` cu
+  `{"box": [...], "kicker", "title" (cu *accent* și |), "sub", "points": [2 rânduri], "price": "de la *39 lei*", "button": "postamosului.ro"}`.
+- Texte de vânzare, scurte: ce este (videoclip de la Moș, pe nume), cât de repede, cât costă. Un card nou = alt titlu + alte puncte, cost 0.
+- Bun pentru zilele fără sold sau ca al treilea clip al zilei; se trimite ca un clip obișnuit (pasul 5), `duration_seconds: 6`.
