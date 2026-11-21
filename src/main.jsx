@@ -135,7 +135,7 @@ function ViewsCard({posts}){
   const sum=(list,k)=>list.reduce((a,p)=>a+Number(p.metadata?.stats?.[k]||0),0)
   const total=sum(pub,'views'),likes=sum(pub,'likes'),comments=sum(pub,'comments')
   const top=[...pub].filter(p=>p.metadata?.stats?.views).sort((a,b)=>b.metadata.stats.views-a.metadata.stats.views).slice(0,4)
-  const notes=[...new Set(pub.map(p=>p.metadata?.stats?.note).filter(Boolean))].slice(0,2)
+  const notes=[...new Set(pub.map(p=>p.metadata?.stats?.note).filter(n=>n&&n.includes('permisiunea')))].slice(0,2)
   const last=pub.map(p=>p.metadata?.stats?.at).filter(Boolean).sort().pop()
   return <section className="card views-card"><CardHead title="Vizualizări"/>
     <div className="big-number"><strong>{fmtN(total)}</strong><span>vizualizări pe clipurile publicate</span></div>
