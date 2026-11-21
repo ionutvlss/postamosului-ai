@@ -27,7 +27,7 @@ un îndemn clar la final („Comandă în 3 minute”). Fără clișee goale, f�
 Răspunde DOAR JSON: {"variants":[{"angle":"2-4 cuvinte","hook":"text pe ecran, max 8 cuvinte","title":"titlu YouTube, max 70 caractere","body":"caption 2-4 rânduri scurte","hashtags":["#PostaMosului", "...4-6 total"]}]}${voice ? `\nVocea brandului: ${voice}` : ''}`
 }
 
-const GROUP_OPENINGS = ['o întrebare către părinți', 'o prezentare scurtă: cine ești și ce faci', 'o mică poveste sau situație de Crăciun', 'un sfat util pentru surprizele de sărbători', 'direct la subiect, ca un anunț curat']
+const GROUP_OPENINGS = ['o întrebare către părinți', 'o prezentare scurtă: cine ești și ce faci', 'o situație obișnuită de Crăciun, descrisă la general', 'un sfat util pentru surprizele de sărbători', 'direct la subiect, ca un anunț curat']
 
 function groupsPrompt(brief: string, groupType: string, length: string, voice: string, opening: string) {
   const words = length === 'scurt' ? '40-60' : '70-100'
@@ -36,7 +36,7 @@ Tipul grupului: ${GROUP_STYLE[groupType] || GROUP_STYLE.general}. Accent opțion
 Scrie 5 postări DIFERITE, fiecare de ${words} de cuvinte; începuturile, în ordine: ${opening}. Scopul: încredere + să înțeleagă în 5 secunde ce oferim.
 Fiecare postare: spune cine scrie (Ioan, de la Poșta Moșului), ce este produsul într-o propoziție simplă, cum merge (pe scurt: completezi, Moșul face clipul, îl primești pe email),
 un detaliu care dă încredere (fără poze cu copilul / fără cont / datele șterse după 30 de zile / pot asculta gratuit numele), prețul, apoi linkul postamosului.ro la final.
-Ton de om, nu de reclamă: fără majuscule, fără hashtag-uri, maximum 2 emoji, fără presiune agresivă, NU te prezenta drept client sau părinte care a cumpărat.
+Ton de om, nu de reclamă: scrie corect gramatical, cu majusculă la început de propoziție (dar fără CUVINTE ÎNTREGI CU MAJUSCULE), fără hashtag-uri, maximum 2 emoji, fără presiune agresivă. NU te prezenta drept client sau părinte care a cumpărat și NU inventa clienți, recenzii, nume de copii sau întâmplări.
 Răspunde DOAR JSON: {"posts":[{"angle":"2-4 cuvinte","text":"postarea completă, cu rânduri noi \\n"}]}${voice ? `\nVocea brandului: ${voice}` : ''}`
 }
 
