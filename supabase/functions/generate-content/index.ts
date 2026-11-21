@@ -76,7 +76,7 @@ Deno.serve(async (request) => {
       const result = await aiJson(groupsPrompt(brief, clean(input.group_type, 20), clean(input.length, 10), voice, GROUP_OPENINGS.join('; ')), 0.9, { fast: true })
       const posts = listOf(result, 'posts')
         .map(p => ({ angle: clean(p.angle, 40), text: clean(p.text ?? p.body ?? p.post, 1500) })).filter(p => p.text)
-      if (!posts.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : (aiErrors.some(e => e.includes('429')) ? 'S-a atins limita gratuită a AI-ului (Gemini). Încearcă peste un minut sau activează facturarea în Google AI Studio.' : `Niciun model AI nu a răspuns: ${aiErrors.slice(0, 3).join(' | ') || 'fără detalii'}`))
+      if (!posts.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : (aiErrors.length && aiErrors.every(e => e.includes('429')) ? 'S-a atins limita gratuită a AI-ului (Gemini). Încearcă peste un minut sau activează facturarea în Google AI Studio.' : `Niciun model AI nu a răspuns: ${aiErrors.slice(0, 3).join(' | ') || 'fără detalii'}`))
       return json({ mode, posts, model: result?._model, ms: Date.now() - t0 })
     }
 
@@ -87,7 +87,7 @@ Deno.serve(async (request) => {
       angle: clean(v.angle, 40), hook: clean(v.hook, 90), title: clean(v.title ?? v.hook, 100), body: clean(v.body ?? v.caption ?? v.text, 1200),
       hashtags: (Array.isArray(v.hashtags) ? v.hashtags : []).map(h => clean(h, 40)).filter(Boolean).slice(0, 8),
     })).filter(v => v.body)
-    if (!variants.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : (aiErrors.some(e => e.includes('429')) ? 'S-a atins limita gratuită a AI-ului (Gemini). Încearcă peste un minut sau activează facturarea în Google AI Studio.' : `Niciun model AI nu a răspuns: ${aiErrors.slice(0, 3).join(' | ') || 'fără detalii'}`))
+    if (!variants.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : (aiErrors.length && aiErrors.every(e => e.includes('429')) ? 'S-a atins limita gratuită a AI-ului (Gemini). Încearcă peste un minut sau activează facturarea în Google AI Studio.' : `Niciun model AI nu a răspuns: ${aiErrors.slice(0, 3).join(' | ') || 'fără detalii'}`))
     // compatibilitate: primele câmpuri ca înainte (title/body/hashtags) pentru orice apelant vechi
     return json({ mode, platform, variants, title: variants[0].title, body: variants[0].body, hashtags: variants[0].hashtags, model: result?._model, ms: Date.now() - t0 })
   } catch (error) {

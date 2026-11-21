@@ -143,6 +143,24 @@ export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: b
       } catch (e) { console.error('aiJson gemini', model, (e as Error).message); aiErrors.push(`${model}: ${(e as Error).message.slice(0, 160)}`) }
     }
   }
+  // Rezervă gratuită: Groq (API compatibil OpenAI).
+  const groqKey = Deno.env.get('GROQ_API_KEY')
+  if (groqKey) {
+    const models = [Deno.env.get('GROQ_MODEL'), 'openai/gpt-oss-120b', 'llama-3.3-70b-versatile'].filter(Boolean) as string[]
+    for (const model of [...new Set(models)]) {
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` }, signal: timeout(),
+          body: JSON.stringify({ model, temperature, response_format: { type: 'json_object' },
+            messages: [{ role: 'system', content: 'Răspunzi doar cu JSON valid, în limba română.' }, { role: 'user', content: prompt }] }),
+        })
+        const payload = await res.json().catch(() => ({}))
+        const text = payload?.choices?.[0]?.message?.content || ''
+        if (res.ok && text) return { ...asObject(JSON.parse(String(text).replace(/^```json\s*|\s*```$/g, '').trim())), _model: `groq:${model}` }
+        aiErrors.push(`groq ${model}: ${res.status} ${String(payload?.error?.message || '').slice(0, 160)}`)
+      } catch (e) { aiErrors.push(`groq ${model}: ${(e as Error).message.slice(0, 160)}`) }
+    }
+  }
   const openAiKey = Deno.env.get('OPENAI_API_KEY')
   if (openAiKey) {
     const model = Deno.env.get('OPENAI_MODEL') || 'gpt-4.1-mini'
