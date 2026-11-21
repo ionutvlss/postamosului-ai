@@ -189,7 +189,8 @@ async function publishTiktok(post: Post): Promise<Result> {
   }
 
   // Publicare directă: doar dacă e aleasă în Automatizări și ai confirmat declarațiile TikTok.
-  if (settings?.tiktok_mode === 'direct' && settings.tiktok_consent_at) {
+  let directError = ''
+  if (settings?.tiktok_mode === 'direct' && settings.tiktok_consent_at) try {
     const creator = await fetchJson('https://open.tiktokapis.com/v2/post/publish/creator_info/query/', { method: 'POST', headers: auth, body: '{}' })
     const options: string[] = creator.data?.privacy_level_options || []
     const wanted = String(settings.tiktok_privacy || 'PUBLIC_TO_EVERYONE')
@@ -215,11 +216,18 @@ async function publishTiktok(post: Post): Promise<Result> {
     const note = privacy === wanted ? 'Publicat direct pe TikTok (se procesează câteva minute)'
       : `Publicat direct, dar ca ${privacy === 'SELF_ONLY' ? '„Doar eu”' : privacy}: aplicația TikTok nu e încă aprobată pentru postări publice`
     return { done: true, externalId: init.data.publish_id, note }
+  } catch (e) {
+    // Publicarea directă nu e încă activă pentru aplicație (sau token fără video.publish): nu pierdem postarea, o trimitem în inbox.
+    directError = (e as Error).message.slice(0, 160)
+    console.error('tiktok direct → inbox', directError)
   }
 
   const init = await fetchJson('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', { method: 'POST', headers: auth, body: JSON.stringify({ source_info }) })
   await upload(init.data.upload_url)
-  return { done: true, externalId: init.data.publish_id, note: 'Trimis în inbox-ul TikTok: deschide aplicația și publică-l cu textul din platformă' }
+  const note = directError
+    ? 'Publicarea directă pe TikTok nu e încă activă (aplicația așteaptă aprobarea TikTok), așa că l-am trimis în inbox-ul TikTok: deschide aplicația și publică-l'
+    : 'Trimis în inbox-ul TikTok: deschide aplicația și publică-l cu textul din platformă'
+  return { done: true, externalId: init.data.publish_id, note }
 }
 
 // Starea încărcărilor TikTok (inbox): TikTok spune dacă a trimis notificarea, dacă s-a publicat sau de ce a eșuat.

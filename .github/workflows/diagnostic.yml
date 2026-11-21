@@ -2,6 +2,11 @@ name: Diagnostic Supabase
 
 on:
   workflow_dispatch:
+    inputs:
+      retry_ingest:
+        description: "Reprogramează acum postările eșuate cu acest ingest_id (ex. 2026-11-21-test-complet)"
+        required: false
+        default: ""
 
 jobs:
   check:
@@ -9,6 +14,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      RETRY_INGEST: ${{ inputs.retry_ingest }}
     steps:
       - name: Verificări (fără valori secrete)
         run: |
@@ -19,6 +25,11 @@ jobs:
               -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" -H 'Content-Type: application/json' --data "$body" | jq -c '.'
             echo
           }
+          if [ -n "$RETRY_INGEST" ]; then
+            if echo "$RETRY_INGEST" | grep -Eq '^[A-Za-z0-9-]{3,80}$'; then
+              q "Reprogramare $RETRY_INGEST" "update public.posts set status='scheduled', attempts=0, last_error=null, scheduled_for=now() where status='failed' and metadata->>'ingest_id'='$RETRY_INGEST' returning platform, status"
+            else echo "retry_ingest invalid"; fi
+          fi
           q "Joburi cron" "select jobname, schedule, active from cron.job"
           q "Ultimele rulări cron" "select j.jobname, d.status, d.start_time, left(coalesce(d.return_message,''),120) msg from cron.job_run_details d join cron.job j using (jobid) order by d.start_time desc limit 5"
           q "Ultimele răspunsuri HTTP (pg_net)" "select status_code, left(coalesce(content::text,''),160) content, created from net._http_response order by created desc limit 5"
