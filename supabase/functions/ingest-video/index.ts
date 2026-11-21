@@ -58,7 +58,7 @@ async function nextFreeSlot(ownerId: string, platform: Platform, from: Date, pre
 async function createGroupDrafts(ownerId: string, mediaId: string, texts: string[], ingestId: string | null, target: Date) {
   const db = adminClient()
   const { data: groups } = await db.from('group_candidates').select('id, group_name')
-    .eq('owner_id', ownerId).eq('status', 'shortlisted').order('created_at', { ascending: true })
+    .eq('owner_id', ownerId).eq('status', 'shortlisted').eq('metadata->>membership', 'joined').order('created_at', { ascending: true })
   if (!groups?.length) return []
   const { data: existing } = await db.from('group_outreach_drafts').select('group_id, scheduled_for, created_at, status')
     .eq('owner_id', ownerId).neq('status', 'rejected').order('created_at', { ascending: false }).limit(1000)

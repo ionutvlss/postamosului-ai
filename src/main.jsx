@@ -264,12 +264,12 @@ function GroupDraftCard({draft,group,media,onDone,onSkip,onNotice}){
     </div></div>
 }
 function Groups({user,onNotice}){
-  const [groups,setGroups]=useState([]),[drafts,setDrafts]=useState([]),[media,setMedia]=useState({}),[name,setName]=useState(''),[link,setLink]=useState(''),[busy,setBusy]=useState('')
+  const [groups,setGroups]=useState([]),[drafts,setDrafts]=useState([]),[media,setMedia]=useState({}),[name,setName]=useState(''),[link,setLink]=useState(''),[busy,setBusy]=useState(''),[memFilter,setMemFilter]=useState('all')
   const load=()=>Promise.all([listGroupCandidates(),listGroupDrafts(),listMedia()]).then(([g,d,m])=>{setGroups(g);setDrafts(d);setMedia(Object.fromEntries(m.map(x=>[x.id,x])))}).catch(e=>onNotice(`Nu am putut încărca grupurile: ${e.message}`))
   useEffect(()=>{if(user)load()},[user])
   const byId=Object.fromEntries(groups.map(g=>[g.id,g]))
   const endOfToday=new Date();endOfToday.setHours(23,59,59,999)
-  const open=drafts.filter(d=>['pending_approval','approved','draft'].includes(d.status))
+  const open=drafts.filter(d=>['pending_approval','approved','draft'].includes(d.status)&&byId[d.group_id]?.status!=='excluded')
   const todo=open.filter(d=>d.media_id&&(!d.scheduled_for||new Date(d.scheduled_for)<=endOfToday))
   const upcoming=open.filter(d=>d.scheduled_for&&new Date(d.scheduled_for)>endOfToday).sort((a,b)=>a.scheduled_for.localeCompare(b.scheduled_for))
   const lastPosted=id=>{const d=drafts.find(x=>x.group_id===id&&x.status==='posted');return d?.posted_at?new Date(d.posted_at).toLocaleDateString('ro-RO',{day:'numeric',month:'short'}):null}
@@ -281,7 +281,13 @@ function Groups({user,onNotice}){
   const toggleGroup=async g=>{try{await updateGroupCandidate(g.id,{status:g.status==='excluded'?'shortlisted':'excluded'});await load()}catch(e){onNotice(e.message)}}
   const suggestions=groups.filter(g=>g.status==='discovered')
   const listed=groups.filter(g=>g.status!=='discovered')
-  const active=listed.filter(g=>g.status!=='excluded').length
+  const mem=g=>g.metadata?.membership||'none'
+  const setMembership=async(g,m)=>{try{await updateGroupCandidate(g.id,{metadata:{...(g.metadata||{}),membership:m,membership_at:new Date().toISOString()}});await load();onNotice(m==='joined'?`Marcat ca înscris: ${g.group_name}`:m==='requested'?'Notat: cerere trimisă, aștepți aprobarea adminului':'Marcat ca neînscris')}catch(e){onNotice(e.message)}}
+  const mine=listed.filter(g=>!g.metadata?.declined)
+  const counts={joined:mine.filter(g=>mem(g)==='joined').length,requested:mine.filter(g=>mem(g)==='requested').length,none:mine.filter(g=>mem(g)==='none').length}
+  const active=mine.filter(g=>g.status!=='excluded'&&mem(g)==='joined').length
+  const order={joined:0,requested:1,none:2}
+  const shown=mine.filter(g=>memFilter==='all'||mem(g)===memFilter).sort((a,b)=>order[mem(a)]-order[mem(b)]||(a.status==='excluded')-(b.status==='excluded'))
   const accept=async g=>{if(g.group_url)window.open(g.group_url,'_blank','noopener');try{await updateGroupCandidate(g.id,{status:'shortlisted'});await load();onNotice(g.group_url?'Adăugat în rotație. În tab-ul Facebook deschis apasă „Înscrie-te”.':'Adăugat în rotație. Grupul nu are link — adaugă-l ca să-l poți deschide.')}catch(e){onNotice(e.message)}}
   const decline=async g=>{try{await updateGroupCandidate(g.id,{status:'excluded',metadata:{...(g.metadata||{}),declined:true}});await load()}catch(e){onNotice(e.message)}}
   return <><PageTitle eyebrow="GRUPURI FACEBOOK" title="Grupuri Facebook" desc="5 postări pe zi în grupuri, pregătite automat. Tu doar le postezi."/>
@@ -298,11 +304,13 @@ function Groups({user,onNotice}){
     <p className="muted">Grupuri găsite automat. Deschide-l, citește regulile, intră în grup și apoi apasă „Adaug”.</p>
     <div className="groups-list">{suggestions.sort((a,b)=>(b.relevance_score||0)-(a.relevance_score||0)).map(g=><div className="group-row" key={g.id}><div className="group-avatar">{g.group_name.charAt(0)}</div><div className="group-main"><b>{g.group_name}</b><span>{g.member_count?`${g.member_count.toLocaleString('ro-RO')} membri · `:''}{g.metadata?.privacy?`${g.metadata.privacy} · `:''}{g.metadata?.reason||g.category||''}</span></div>{g.relevance_score?<div className="relevance"><small>POTRIVIRE</small><b>{Math.round(g.relevance_score)}%</b></div>:null}<a className="outline small" href={g.group_url} target="_blank" rel="noreferrer">Deschide</a><button className="primary small" onClick={()=>accept(g)} title="Adaugă în rotație și deschide grupul pe Facebook">Adaug și deschid ↗</button><button className="outline small danger" onClick={()=>decline(g)}>Nu</button></div>)}</div>
   </section>}
-  <section className="card" style={{marginBottom:16}}><CardHead title={`Grupurile tale (${active} în rotație)`}/>
+  <section className="card" style={{marginBottom:16}}><CardHead title={`Grupurile tale · ${counts.joined} înscris · ${active} în rotație`}/>
+    <p className="muted">Platforma pregătește postări <b>doar pentru grupurile marcate „Înscris”</b>. După ce intri într-un grup pe Facebook, apasă aici „M-am înscris ✓”. Dacă grupul cere aprobarea adminului, apasă „Cerere trimisă” și revino când ești acceptat.</p>
     <p className="muted">Recomandat: cel puțin 25–35 de grupuri, ca fiecare să primească o postare cel mult o dată pe săptămână. Verifică regulile fiecărui grup (unele permit reclame doar în anumite zile).</p>
     <div className="form-row"><label>Numele grupului<input value={name} onChange={e=>setName(e.target.value)} placeholder="ex. Mămici din Brașov"/></label><label>Link grup<input value={link} onChange={e=>setLink(e.target.value)} placeholder="https://facebook.com/groups/…"/></label></div>
     <button className="primary" style={{marginTop:12}} disabled={busy==='add'} onClick={add}>＋ Adaugă grupul</button>
-    <div className="groups-list" style={{marginTop:18}}>{!listed.length&&<p className="muted">Nu ai adăugat încă niciun grup.</p>}{listed.filter(g=>!g.metadata?.declined).map(g=><div className={`group-row ${g.status==='excluded'?'paused':''}`} key={g.id}><div className="group-avatar">{g.group_name.charAt(0)}</div><div className="group-main"><b>{g.group_name}</b><span>{postedCount(g.id)} postări{lastPosted(g.id)?` · ultima pe ${lastPosted(g.id)}`:''}{g.group_url?<> · <a className="text-btn" href={g.group_url} target="_blank" rel="noreferrer">deschide</a></>:<> · <b className="red">fără link</b></>}</span></div><button className="outline small" onClick={()=>editGroupLink(g)}>{g.group_url?'Schimbă linkul':'＋ Link'}</button><button className="outline small" onClick={()=>toggleGroup(g)}>{g.status==='excluded'?'Reia':'Pauză'}</button></div>)}</div>
+    <div className="mem-filter">{[['all',`Toate (${mine.length})`],['joined',`✓ Înscris (${counts.joined})`],['requested',`⏳ Cerere trimisă (${counts.requested})`],['none',`Neînscris (${counts.none})`]].map(([k,l])=><button key={k} className={memFilter===k?'active':''} onClick={()=>setMemFilter(k)}>{l}</button>)}</div>
+    <div className="groups-list" style={{marginTop:14}}>{!shown.length&&<p className="muted">{mine.length?'Niciun grup în această categorie.':'Nu ai adăugat încă niciun grup.'}</p>}{shown.map(g=><div className={`group-row ${g.status==='excluded'?'paused':''}`} key={g.id}><div className="group-avatar">{g.group_name.charAt(0)}</div><div className="group-main"><b>{g.group_name} {mem(g)==='joined'?<em className="mem joined">✓ Înscris</em>:mem(g)==='requested'?<em className="mem requested">⏳ Cerere trimisă</em>:<em className="mem none">Neînscris</em>}</b><span>{postedCount(g.id)} postări{lastPosted(g.id)?` · ultima pe ${lastPosted(g.id)}`:''}{g.group_url?<> · <a className="text-btn" href={g.group_url} target="_blank" rel="noreferrer">deschide</a></>:<> · <b className="red">fără link</b></>}</span></div>{mem(g)!=='joined'&&<button className="primary small" onClick={()=>setMembership(g,'joined')}>M-am înscris ✓</button>}{mem(g)==='none'&&<button className="outline small" onClick={()=>setMembership(g,'requested')}>Cerere trimisă</button>}{mem(g)==='joined'&&<button className="text-btn" onClick={()=>setMembership(g,'none')}>nu mai sunt înscris</button>}<button className="outline small" onClick={()=>editGroupLink(g)}>{g.group_url?'Schimbă linkul':'＋ Link'}</button><button className="outline small" onClick={()=>toggleGroup(g)}>{g.status==='excluded'?'Reia':'Pauză'}</button></div>)}</div>
   </section></>}
 function Analytics(){
   const [items,setItems]=useState([])
