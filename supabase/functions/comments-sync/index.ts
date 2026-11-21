@@ -131,18 +131,6 @@ async function syncStats() {
         const dbg = await fetchJson(`${GRAPH}/debug_token?${new URLSearchParams({ input_token: accessToken, access_token: `${env('META_APP_ID')}|${env('META_APP_SECRET')}` })}`)
         await db().from('social_accounts').update({ metadata: { ...(acc.metadata || {}), granted_scopes: dbg.data?.scopes || [], token_type: dbg.data?.type || null } }).eq('id', acc.id)
       } catch (e) { console.error('debug_token', (e as Error).message) }
-      // Sondă temporară: care apeluri de statistici merg cu tokenul actual (pentru depanare).
-      const probe: Record<string, string> = {}
-      const sample = (await db().from('posts').select('external_post_id').eq('platform', acc.platform).eq('status', 'published').not('external_post_id', 'is', null).order('published_at', { ascending: false }).limit(1)).data?.[0]?.external_post_id
-      const tries: [string, string][] = acc.platform === 'instagram'
-        ? [['reach', `${sample}/insights?metric=reach`], ['plays', `${sample}/insights?metric=ig_reels_aggregated_all_plays_count`], ['account', `${acc.external_account_id}/insights?metric=reach&period=day`]]
-        : [['vi_all', `${sample}/video_insights`], ['views_field', `${sample}?fields=views,length`], ['page', `${acc.external_account_id}/insights?metric=page_impressions_unique&period=day`]]
-      for (const [k, path] of tries) {
-        try { const r = await fetchJson(`${GRAPH}/${path}${path.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(accessToken)}`); probe[k] = 'OK ' + JSON.stringify(r).slice(0, 160) }
-        catch (e) { probe[k] = 'ERR ' + (e as Error).message.slice(0, 160) }
-      }
-      const { data: fresh } = await db().from('social_accounts').select('metadata').eq('id', acc.id).maybeSingle()
-      await db().from('social_accounts').update({ metadata: { ...(fresh?.metadata || {}), stats_probe: probe } }).eq('id', acc.id)
     }
     const { data: rows } = await db().from('posts').select('id, external_post_id, metadata').eq('owner_id', acc.owner_id).eq('platform', acc.platform)
       .eq('status', 'published').not('external_post_id', 'is', null).gte('published_at', new Date(Date.now() - 60 * 86400000).toISOString()).limit(80)
@@ -163,16 +151,28 @@ async function syncStats() {
           if (acc.platform === 'instagram') {
             const m = await fetchJson(`${GRAPH}/${id}?${new URLSearchParams({ fields: 'like_count,comments_count', access_token: accessToken })}`)
             stat.likes = Number(m.like_count || 0); stat.comments = Number(m.comments_count || 0)
+            const metric = async (m: string) => {
+              const ins = await fetchJson(`${GRAPH}/${id}/insights?${new URLSearchParams({ metric: m, access_token: accessToken })}`)
+              return Number(ins.data?.find((x: any) => x.name === m)?.values?.[0]?.value ?? 0)
+            }
             try {
-              const ins = await fetchJson(`${GRAPH}/${id}/insights?${new URLSearchParams({ metric: 'views', access_token: accessToken })}`)
-              stat.views = Number(ins.data?.find((x: any) => x.name === 'views')?.values?.[0]?.value ?? 0)
+              // „views” nu e disponibil pentru toate conturile/aplicațiile: atunci folosim „reach” (conturi unice care l-au văzut).
+              try { stat.views = await metric('views'); stat.views_kind = 'views' }
+              catch { stat.views = await metric('reach'); stat.views_kind = 'reach' }
+              try { stat.shares = await metric('shares') } catch { /* opțional */ }
             } catch (e) { stat.note = `Vizualizările Instagram cer permisiunea „instagram_manage_insights”: reconectează Meta [${(e as Error).message.slice(0, 140)}]` }
           } else {
             const m = await fetchJson(`${GRAPH}/${id}?${new URLSearchParams({ fields: 'likes.summary(true).limit(0),comments.summary(true).limit(0)', access_token: accessToken })}`)
             stat.likes = Number(m.likes?.summary?.total_count || 0); stat.comments = Number(m.comments?.summary?.total_count || 0)
             try {
-              const ins = await fetchJson(`${GRAPH}/${id}/video_insights?${new URLSearchParams({ metric: 'blue_reels_play_count', access_token: accessToken })}`)
-              stat.views = Number(ins.data?.[0]?.values?.[0]?.value ?? 0)
+              const ins = await fetchJson(`${GRAPH}/${id}/video_insights?${new URLSearchParams({ access_token: accessToken })}`)
+              const pick = (n: string) => ins.data?.find((x: any) => x.name === n)?.values?.[0]?.value
+              const v = ['blue_reels_play_count', 'fb_reels_total_plays', 'post_video_views', 'total_video_views'].map(pick).find(x => typeof x === 'number')
+              if (typeof v === 'number') stat.views = v
+              else {
+                const f = await fetchJson(`${GRAPH}/${id}?${new URLSearchParams({ fields: 'views', access_token: accessToken })}`)
+                stat.views = Number(f.views || 0)
+              }
             } catch (e) { stat.note = `Vizualizările Facebook cer permisiunea „read_insights”: reconectează Meta [${(e as Error).message.slice(0, 140)}]` }
           }
         } catch (e) { stat.note = (e as Error).message.slice(0, 160) }
