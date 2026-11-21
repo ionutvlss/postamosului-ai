@@ -231,6 +231,32 @@ async function publishTiktok(post: Post): Promise<Result> {
 }
 
 // Starea încărcărilor TikTok (inbox): TikTok spune dacă a trimis notificarea, dacă s-a publicat sau de ce a eșuat.
+// Starea reel-urilor Facebook: „finish” doar pornește publicarea; Facebook procesează apoi clipul și poate eșua.
+async function refreshFacebookStatus() {
+  const since = new Date(Date.now() - 72 * 3600_000).toISOString()
+  const { data: rows } = await db().from('posts').select('*').eq('platform', 'facebook').eq('status', 'published')
+    .gte('published_at', since).not('external_post_id', 'is', null).limit(10)
+  const out = []
+  for (const post of (rows || []) as (Post & { external_post_id: string })[]) {
+    if (post.metadata?.fb_status === 'published' || post.metadata?.fb_status === 'error') continue
+    try {
+      const { token } = await account(post)
+      const r = await fetchJson(`${GRAPH}/${post.external_post_id}?${new URLSearchParams({ fields: 'status,published,permalink_url', access_token: token.access_token })}`)
+      const st = r.status || {}
+      const err = st.publishing_phase?.errors?.[0]?.message || st.processing_phase?.errors?.[0]?.message || st.uploading_phase?.errors?.[0]?.message || ''
+      const fb = err || st.video_status === 'error' ? 'error' : (st.publishing_phase?.status === 'complete' || r.published === true) ? 'published' : String(st.video_status || 'processing')
+      const meta = { ...post.metadata, fb_status: fb, fb_raw: { video_status: st.video_status, processing: st.processing_phase?.status, publishing: st.publishing_phase?.status, published: r.published } }
+      if (fb === 'error') {
+        await db().from('posts').update({ status: 'failed', last_error: `Facebook a refuzat reel-ul: ${err || 'eroare la procesare'}`, metadata: meta }).eq('id', post.id)
+      } else {
+        await db().from('posts').update({ metadata: meta, ...(r.permalink_url ? { external_url: r.permalink_url.startsWith('http') ? r.permalink_url : `https://www.facebook.com${r.permalink_url}` } : {}) }).eq('id', post.id)
+      }
+      out.push({ id: post.id, fb, err })
+    } catch (e) { out.push({ id: post.id, error: (e as Error).message.slice(0, 200) }) }
+  }
+  return out
+}
+
 async function refreshTiktokStatus() {
   const since = new Date(Date.now() - 48 * 3600_000).toISOString()
   const { data: rows } = await db().from('posts').select('*').eq('platform', 'tiktok').eq('status', 'published')
@@ -331,7 +357,8 @@ Deno.serve(async (request) => {
     }
     for (const post of await claim(postId)) results.push(await process(post))
     const tiktok = postId ? [] : await refreshTiktokStatus()
-    return json({ processed: results.length, results, tiktok })
+    const facebook = postId ? [] : await refreshFacebookStatus().catch(e => [{ error: (e as Error).message }])
+    return json({ processed: results.length, results, facebook, tiktok })
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500
     return json({ error: (error as Error).message }, status)
