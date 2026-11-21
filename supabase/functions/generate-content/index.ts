@@ -28,7 +28,7 @@ Răspunde DOAR JSON: {"variants":[{"angle":"2-4 cuvinte","hook":"text pe ecran, 
 }
 
 function groupsPrompt(brief: string, groupType: string, length: string, voice: string) {
-  const words = length === 'scurt' ? '45-70' : '80-120'
+  const words = length === 'scurt' ? '40-60' : '70-100'
   return `Scrii postări pentru grupuri de Facebook, din partea lui Ioan, fondatorul Poșta Moșului (persoană reală, vorbește la persoana I). ${FACTS}
 Tipul grupului: ${GROUP_STYLE[groupType] || GROUP_STYLE.general}. Accent opțional: ${brief || 'prezentare generală'}.
 Scrie 5 postări DIFERITE (alt început, altă structură), fiecare ${words} de cuvinte. Scopul: încredere + să înțeleagă în 5 secunde ce oferim.

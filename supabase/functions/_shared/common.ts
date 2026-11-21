@@ -123,9 +123,9 @@ export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: b
   const geminiKey = Deno.env.get('GEMINI_API_KEY')
   const timeout = () => opts.fast ? AbortSignal.timeout(45000) : AbortSignal.timeout(60000)
   if (geminiKey) {
-    const models = [Deno.env.get('GEMINI_MODEL'), 'gemini-3.8-flash', 'gemini-3.5-flash'].filter(Boolean) as string[]
+    const models = [Deno.env.get('GEMINI_MODEL'), 'gemini-3.5-flash', 'gemini-3.8-flash'].filter(Boolean) as string[]
     for (const model of [...new Set(models)]) {
-      const thinking = !opts.fast ? undefined : model.startsWith('gemini-2.5') ? { thinkingBudget: 0 } : { thinkingLevel: 'minimal' }
+      const thinking = !opts.fast ? undefined : model.startsWith('gemini-2.5') ? { thinkingBudget: 0 } : { thinkingLevel: 'low' }
       const call = (withThinking: boolean) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, signal: timeout(),
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }],
@@ -134,6 +134,7 @@ export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: b
       try {
         let res = await call(true)
         if (res.status === 400 && thinking) res = await call(false) // modelul nu acceptă setarea: încearcă fără ea
+        if (res.status === 503 || res.status === 429) { await new Promise(r => setTimeout(r, 1500)); res = await call(true) } // supraîncărcare de moment
         const payload = await res.json().catch(() => ({}))
         const text = payload?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || ''
         if (res.ok && text) return { ...asObject(JSON.parse(text.replace(/^```json\s*|\s*```$/g, '').trim())), _model: model }
