@@ -27,15 +27,17 @@ un îndemn clar la final („Comandă în 3 minute”). Fără clișee goale, f�
 Răspunde DOAR JSON: {"variants":[{"angle":"2-4 cuvinte","hook":"text pe ecran, max 8 cuvinte","title":"titlu YouTube, max 70 caractere","body":"caption 2-4 rânduri scurte","hashtags":["#PostaMosului", "...4-6 total"]}]}${voice ? `\nVocea brandului: ${voice}` : ''}`
 }
 
-function groupsPrompt(brief: string, groupType: string, length: string, voice: string) {
+const GROUP_OPENINGS = ['o întrebare către părinți', 'o prezentare scurtă: cine ești și ce faci', 'o mică poveste sau situație de Crăciun', 'un sfat util pentru surprizele de sărbători', 'direct la subiect, ca un anunț curat']
+
+function groupsPrompt(brief: string, groupType: string, length: string, voice: string, opening: string) {
   const words = length === 'scurt' ? '40-60' : '70-100'
   return `Scrii postări pentru grupuri de Facebook, din partea lui Ioan, fondatorul Poșta Moșului (persoană reală, vorbește la persoana I). ${FACTS}
 Tipul grupului: ${GROUP_STYLE[groupType] || GROUP_STYLE.general}. Accent opțional: ${brief || 'prezentare generală'}.
-Scrie 5 postări DIFERITE (alt început, altă structură), fiecare ${words} de cuvinte. Scopul: încredere + să înțeleagă în 5 secunde ce oferim.
+Scrie O SINGURĂ postare de ${words} de cuvinte, care începe cu ${opening}. Scopul: încredere + să înțeleagă în 5 secunde ce oferim.
 Fiecare postare: spune cine scrie (Ioan, de la Poșta Moșului), ce este produsul într-o propoziție simplă, cum merge (pe scurt: completezi, Moșul face clipul, îl primești pe email),
 un detaliu care dă încredere (fără poze cu copilul / fără cont / datele șterse după 30 de zile / pot asculta gratuit numele), prețul, apoi linkul postamosului.ro la final.
 Ton de om, nu de reclamă: fără majuscule, fără hashtag-uri, maximum 2 emoji, fără presiune agresivă, NU te prezenta drept client sau părinte care a cumpărat.
-Răspunde DOAR JSON: {"posts":[{"angle":"2-4 cuvinte","text":"postarea completă cu rânduri noi \\n"}]}${voice ? `\nVocea brandului: ${voice}` : ''}`
+Răspunde DOAR JSON: {"angle":"2-4 cuvinte","text":"postarea completă, cu rânduri noi \\n"}${voice ? `\nVocea brandului: ${voice}` : ''}`
 }
 
 const clean = (s: unknown, max = 2000) => String(s ?? '').trim().slice(0, max)
@@ -69,8 +71,11 @@ Deno.serve(async (request) => {
     if (mode === 'social' && !brief) throw new HttpError(400, 'Scrie ideea sau alege una din sugestii')
 
     if (mode === 'groups') {
-      const result = await aiJson(groupsPrompt(brief, clean(input.group_type, 20), clean(input.length, 10), voice), 0.9, { fast: true })
-      const posts = listOf(result, 'posts').map(p => ({ angle: clean(p.angle, 40), text: clean(p.text ?? p.body ?? p.post, 1500) })).filter(p => p.text)
+      // 5 postări în paralel (câte una pe apel): răspuns în câteva secunde, nu un singur apel lung.
+      const results = await Promise.all(GROUP_OPENINGS.map(o => aiJson(groupsPrompt(brief, clean(input.group_type, 20), clean(input.length, 10), voice, o), 0.95, { fast: true })))
+      const result = results.find(Boolean) || null
+      const posts = results.flatMap(r => r ? (typeof r.text === 'string' ? [r] : listOf(r, 'posts')) : [])
+        .map(p => ({ angle: clean(p.angle, 40), text: clean(p.text ?? p.body ?? p.post, 1500) })).filter(p => p.text)
       if (!posts.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : `Niciun model AI nu a răspuns: ${aiErrors.join(' | ') || 'fără detalii'}`)
       return json({ mode, posts, model: result?._model })
     }
