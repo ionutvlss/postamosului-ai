@@ -113,10 +113,13 @@ export async function saveAccount(input: {
  * gemini-2.5-flash, apoi OpenAI (OPENAI_MODEL sau gpt-4.1-mini). Întoarce null dacă niciunul nu răspunde valid.
  */
 /** Modelul răspunde uneori cu o listă direct, în loc de obiect: o punem sub cheia „items”. */
+/** Erorile ultimului apel aiJson (pentru mesaje clare în platformă). */
+export const aiErrors: string[] = []
 const asObject = (v: unknown) => Array.isArray(v) ? { items: v } : (v && typeof v === 'object' ? v as Record<string, unknown> : { value: v })
 
 /** `fast`: fără „gândire” extinsă (răspuns în câteva secunde) și cu limită de timp pe fiecare model. */
 export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: boolean } = {}): Promise<Record<string, unknown> | null> {
+  aiErrors.length = 0
   const geminiKey = Deno.env.get('GEMINI_API_KEY')
   const timeout = () => opts.fast ? AbortSignal.timeout(25000) : AbortSignal.timeout(60000)
   if (geminiKey) {
@@ -135,7 +138,8 @@ export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: b
         const text = payload?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || ''
         if (res.ok && text) return { ...asObject(JSON.parse(text.replace(/^```json\s*|\s*```$/g, '').trim())), _model: model }
         console.error('aiJson gemini', model, res.status, payload?.error?.message || '')
-      } catch (e) { console.error('aiJson gemini', model, (e as Error).message) }
+        aiErrors.push(`${model}: ${res.status} ${String(payload?.error?.message || (text ? 'răspuns gol' : 'fără text')).slice(0, 160)}`)
+      } catch (e) { console.error('aiJson gemini', model, (e as Error).message); aiErrors.push(`${model}: ${(e as Error).message.slice(0, 160)}`) }
     }
   }
   const openAiKey = Deno.env.get('OPENAI_API_KEY')
@@ -152,7 +156,8 @@ export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: b
         .find((i: { type?: string }) => i.type === 'output_text')?.text || ''
       if (res.ok && text) return { ...asObject(JSON.parse(String(text).replace(/^```json\s*|\s*```$/g, '').trim())), _model: model }
       console.error('aiJson openai', res.status, payload?.error?.message || '')
-    } catch (e) { console.error('aiJson openai', (e as Error).message) }
+      aiErrors.push(`${model}: ${res.status} ${String(payload?.error?.message || '').slice(0, 160)}`)
+    } catch (e) { console.error('aiJson openai', (e as Error).message); aiErrors.push(`openai: ${(e as Error).message.slice(0, 160)}`) }
   }
   return null
 }

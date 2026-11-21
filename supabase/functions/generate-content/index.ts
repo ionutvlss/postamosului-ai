@@ -1,4 +1,4 @@
-import { adminClient, aiJson, corsHeaders, HttpError, json, requireAdmin } from '../_shared/common.ts'
+import { adminClient, aiErrors, aiJson, corsHeaders, HttpError, json, requireAdmin } from '../_shared/common.ts'
 
 // Faptele pe care textele au voie să le folosească (nimic inventat în afara lor).
 const FACTS = `Produsul: videoclip personalizat de la Moș Crăciun, în care Moșul îi vorbește copilului pe nume, despre ce a reușit, ce îi place și ce își dorește.
@@ -71,7 +71,7 @@ Deno.serve(async (request) => {
     if (mode === 'groups') {
       const result = await aiJson(groupsPrompt(brief, clean(input.group_type, 20), clean(input.length, 10), voice), 0.9, { fast: true })
       const posts = listOf(result, 'posts').map(p => ({ angle: clean(p.angle, 40), text: clean(p.text ?? p.body ?? p.post, 1500) })).filter(p => p.text)
-      if (!posts.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : 'Niciun model AI nu a răspuns (verifică cheia Gemini/OpenAI).')
+      if (!posts.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : `Niciun model AI nu a răspuns: ${aiErrors.join(' | ') || 'fără detalii'}`)
       return json({ mode, posts, model: result?._model })
     }
 
@@ -82,7 +82,7 @@ Deno.serve(async (request) => {
       angle: clean(v.angle, 40), hook: clean(v.hook, 90), title: clean(v.title ?? v.hook, 100), body: clean(v.body ?? v.caption ?? v.text, 1200),
       hashtags: (Array.isArray(v.hashtags) ? v.hashtags : []).map(h => clean(h, 40)).filter(Boolean).slice(0, 8),
     })).filter(v => v.body)
-    if (!variants.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : 'Niciun model AI nu a răspuns (verifică cheia Gemini/OpenAI).')
+    if (!variants.length) throw new HttpError(502, result ? 'AI-ul a răspuns într-un format neașteptat. Încearcă din nou.' : `Niciun model AI nu a răspuns: ${aiErrors.join(' | ') || 'fără detalii'}`)
     // compatibilitate: primele câmpuri ca înainte (title/body/hashtags) pentru orice apelant vechi
     return json({ mode, platform, variants, title: variants[0].title, body: variants[0].body, hashtags: variants[0].hashtags, model: result?._model })
   } catch (error) {
