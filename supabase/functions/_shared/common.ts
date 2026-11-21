@@ -112,16 +112,22 @@ export async function saveAccount(input: {
  * Cere un răspuns JSON de la AI, cu rezerve: modelul din GEMINI_MODEL (dacă e setat), gemini-3.5-flash,
  * gemini-2.5-flash, apoi OpenAI (OPENAI_MODEL sau gpt-4.1-mini). Întoarce null dacă niciunul nu răspunde valid.
  */
-export async function aiJson(prompt: string, temperature = 0.7): Promise<Record<string, unknown> | null> {
+/** `fast`: fără „gândire” extinsă (răspuns în câteva secunde) și cu limită de timp pe fiecare model. */
+export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: boolean } = {}): Promise<Record<string, unknown> | null> {
   const geminiKey = Deno.env.get('GEMINI_API_KEY')
+  const timeout = () => opts.fast ? AbortSignal.timeout(25000) : AbortSignal.timeout(60000)
   if (geminiKey) {
     const models = [Deno.env.get('GEMINI_MODEL'), 'gemini-3.5-flash', 'gemini-2.5-flash'].filter(Boolean) as string[]
     for (const model of [...new Set(models)]) {
+      const thinking = !opts.fast ? undefined : model.startsWith('gemini-2.5') ? { thinkingBudget: 0 } : { thinkingLevel: 'low' }
+      const call = (withThinking: boolean) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, signal: timeout(),
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature, ...(withThinking && thinking ? { thinkingConfig: thinking } : {}) } }),
+      })
       try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature } }),
-        })
+        let res = await call(true)
+        if (res.status === 400 && thinking) res = await call(false) // modelul nu acceptă setarea: încearcă fără ea
         const payload = await res.json().catch(() => ({}))
         const text = payload?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || ''
         if (res.ok && text) return { ...JSON.parse(text.replace(/^```json\s*|\s*```$/g, '').trim()), _model: model }
@@ -135,6 +141,7 @@ export async function aiJson(prompt: string, temperature = 0.7): Promise<Record<
     try {
       const res = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openAiKey}` },
+        signal: timeout(),
         body: JSON.stringify({ model, input: prompt, temperature, text: { format: { type: 'json_object' } } }),
       })
       const payload = await res.json().catch(() => ({}))
