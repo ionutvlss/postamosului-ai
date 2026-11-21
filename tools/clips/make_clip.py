@@ -170,9 +170,12 @@ def build_ass(spec, words, total, end_start):
         reset = rf"\fn{base_font}\fs{base_size}\c{IVORY_ASS}\1a&H00&"
         return ("{" + tags + "}" if tags else "") + word + ("{" + reset + "}" if tags else "")
 
-    for g in phrases(words, max_chars=30 if style == "editorial" else 30, max_words=6):
+    groups = phrases(words, max_chars=30 if style == "editorial" else 30, max_words=6)
+    for gi, g in enumerate(groups):
         brk = split_two(g, 17 if style == "editorial" else 15)
         g_end = min(g[-1]["e"] + 0.18, end_start - 0.05)
+        if gi + 1 < len(groups):  # fraza se stinge complet înainte să apară următoarea (fără suprapuneri)
+            g_end = max(g[-1]["e"], min(g_end, groups[gi + 1][0]["s"] - 0.02))
         if style == "editorial":
             for i, cur in enumerate(g):
                 start = cur["s"] if i else g[0]["s"]
