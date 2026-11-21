@@ -128,7 +128,7 @@ async function syncStats() {
     try { accessToken = await token(acc) } catch { out.errors++; continue }
     const { data: rows } = await db().from('posts').select('id, external_post_id, metadata').eq('owner_id', acc.owner_id).eq('platform', acc.platform)
       .eq('status', 'published').not('external_post_id', 'is', null).gte('published_at', new Date(Date.now() - 60 * 86400000).toISOString()).limit(80)
-    const due = (rows || []).filter(r => !r.metadata?.stats?.at || r.metadata.stats.at < stale).slice(0, 25)
+    const due = (rows || []).filter(r => !r.metadata?.stats?.at || r.metadata.stats.at < stale || r.metadata.stats.note).slice(0, 25)
     if (!due.length) continue
     const results = new Map<string, Record<string, unknown>>()
     if (acc.platform === 'youtube') {
