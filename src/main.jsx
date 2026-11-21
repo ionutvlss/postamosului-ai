@@ -72,7 +72,7 @@ function App(){
   if (authLoading) return <div className="auth-loading">Se verifică sesiunea administratorului…</div>
   if (isSupabaseConfigured && !session) return <AuthScreen />
   const render = () => {
-    if(active==='Dashboard') return <Dashboard name={profile.full_name||'Administrator'} posts={posts} onNavigate={setActive}/>
+    if(active==='Dashboard') return <Dashboard name={profile.full_name||'Administrator'} posts={posts} onNavigate={setActive} onNotice={showNotice}/>
     if(active==='Conturi social') return <Social onNotice={showNotice}/>
     if(active==='Media library') return <Media media={media} setMedia={setMedia} user={session?.user} onNotice={showNotice}/>
     if(active==='AI Content Studio') return <Studio prompt={prompt} setPrompt={setPrompt} generated={generated} setGenerated={setGenerated} user={session?.user} onNotice={showNotice}/>
@@ -100,7 +100,7 @@ function AuthScreen(){
   return <div className="auth-screen"><div className="auth-card"><div className="brand-mark">✦</div><div className="eyebrow">POSTAMOȘULUI AI</div><h1>Bine ai revenit</h1><p>Autentifică-te pentru a accesa command center-ul.</p><form onSubmit={signIn}><label>Email administrator<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email"/></label><label>Parolă<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required autoComplete="current-password"/></label>{error&&<div className="auth-error">{error}</div>}<button className="primary wide" disabled={busy}>{busy?'Se autentifică…':'Intră în dashboard →'}</button></form><small>Acces restricționat administratorilor aprobați.</small></div></div>
 }
 function PageTitle({eyebrow,title,desc,action}){return <div className="page-title"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{desc}</p></div>{action}</div>}
-function Dashboard({name,posts,onNavigate}){
+function Dashboard({name,posts,onNavigate,onNotice}){
   const raw=posts.filter(p=>p.rawStatus)
   const pending=raw.filter(p=>p.rawStatus==='pending_approval').length
   const scheduledCount=raw.filter(p=>p.rawStatus==='scheduled').length
@@ -112,9 +112,20 @@ function Dashboard({name,posts,onNavigate}){
   const max=Math.max(4,...perDay)
   return <><PageTitle eyebrow={todayLabel({weekday:'long',day:'numeric',month:'long',year:'numeric'})} title={<>{new Date().getHours()<12?'Bună dimineața':new Date().getHours()<18?'Bună ziua':'Bună seara'}, {name} <span className="red">✦</span></>} desc="Ce ai de aprobat și ce urmează să se publice." action={<button className="primary" onClick={()=>onNavigate('Calendar editorial')}>Deschide aprobările</button>}/>
   <div className="stats"><Stat label="De aprobat" value={pending} change="necesită acțiune" tone="red" note="Calendar → De aprobat"/><Stat label="Programate" value={scheduledCount} change="aprobate" tone="gold" note="se publică automat"/><Stat label="Publicate" value={published} change="total" tone="green" note="pe toate platformele"/><Stat label="Eșuate" value={failed} change={failed?'de verificat':'nicio problemă'} tone={failed?'red':'green'} note="motivul apare în calendar"/></div>
+  <TikTokInbox posts={raw} onNotice={onNotice}/>
   <div className="dashboard-grid"><section className="card activity"><CardHead title="Postări în următoarele 14 zile"/><div className="chart"><div className="chart-labels"><span>{max}</span><span></span><span>{Math.round(max/2)}</span><span></span><span>0</span></div><div className="bars">{perDay.map((v,i)=><div className="bar-wrap" key={i} title={`${days[i].toLocaleDateString('ro-RO',{day:'numeric',month:'short'})}: ${v} postări`}><div className={i===0?'bar hot':'bar'} style={{height:`${Math.max(2,v/max*100)}%`}}></div></div>)}</div></div><div className="chart-days">{[0,3,6,9,13].map(i=><span key={i}>{days[i].toLocaleDateString('ro-RO',{day:'numeric',month:'short'})}</span>)}</div></section>
   <section className="card quick"><CardHead title="Acces rapid"/><Quick icon="✓" title="Aprobă clipurile" desc={`${pending} așteaptă`} onClick={()=>onNavigate('Calendar editorial')}/><Quick icon="▣" title="Media library" desc="Clipurile tale" onClick={()=>onNavigate('Media library')}/><Quick icon="◎" title="Conturi social" desc="Conectează rețelele" onClick={()=>onNavigate('Conturi social')}/></section></div>
   <section className="card schedule"><CardHead title="Următoarele postări" link="Deschide calendarul" onClick={()=>onNavigate('Calendar editorial')}/><div className="post-list">{upcoming.length?upcoming.map(p=><PostRow key={p.id} p={{...p,time:new Date(p.scheduled_for).toLocaleString('ro-RO',{weekday:'short',hour:'2-digit',minute:'2-digit'})}}/>):<p className="muted">Nu ai postări programate.</p>}</div></section></>}
+function TikTokInbox({posts,onNotice}){
+  const since=Date.now()-72*3600_000
+  const items=posts.filter(p=>p.platform===PLATFORM.tiktok.label&&p.rawStatus==='published'&&p.published_at&&new Date(p.published_at).getTime()>since&&!['PUBLISH_COMPLETE','FAILED'].includes(p.metadata?.tiktok_status)).sort((a,b)=>new Date(b.published_at)-new Date(a.published_at))
+  if(!items.length)return null
+  const text=p=>`${(p.body||p.title||'').trim()}\n\n${(p.hashtags||[]).join(' ')}`.trim()
+  const copy=async p=>{try{await navigator.clipboard.writeText(text(p));onNotice('Descriere copiată. În TikTok: deschide notificarea, lipește în descriere și apasă Postează.')}catch{onNotice('Nu am putut copia: selectează textul manual')}}
+  return <section className="card tiktok-inbox"><CardHead title={`TikTok · de postat din Inbox (${items.length})`}/>
+    <p className="muted">TikTok nu permite încă trimiterea descrierii odată cu clipul. Copiezi descrierea de aici, deschizi notificarea din aplicația TikTok, o lipești și apeși „Postează”.</p>
+    <div className="tt-list">{items.map(p=><div className="tt-row" key={p.id}><div className="tt-main"><b>{p.title||'Clip'}</b><span>{(p.body||'').split('\n')[0].slice(0,110)}</span><small>trimis {new Date(p.published_at).toLocaleString('ro-RO',{weekday:'short',hour:'2-digit',minute:'2-digit'})}</small></div><button className="primary small" onClick={()=>copy(p)}>Copiază descrierea</button></div>)}</div>
+  </section>}
 function Stat({label,value,change,tone,note}){return <div className="stat"><span>{label}</span><div><strong>{value}</strong><em className={tone}>{change}</em></div><small>{note}</small></div>}
 function CardHead({title,link,onClick}){return <div className="card-head"><h2>{title}</h2>{link&&<button className="text-btn" onClick={onClick}>{link} →</button>}</div>}
 function Quick({icon,title,desc,onClick}){return <button className="quick-row" onClick={onClick}><span className="quick-icon">{icon}</span><span><b>{title}</b><small>{desc}</small></span><i>→</i></button>}
