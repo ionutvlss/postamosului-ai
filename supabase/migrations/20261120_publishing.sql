@@ -136,3 +136,12 @@ drop policy if exists automation_runs_admin on public.automation_runs;
 create policy automation_runs_admin on public.automation_runs for select using (owner_id = auth.uid() and public.is_admin());
 grant select on public.automation_runs to authenticated;
 grant all on public.automation_runs to service_role;
+
+-- Publicare fără aprobare (opțională) și modul TikTok (inbox sau publicare directă).
+alter table public.automation_settings add column if not exists auto_publish boolean not null default false;
+alter table public.automation_settings add column if not exists tiktok_mode text not null default 'inbox';
+alter table public.automation_settings drop constraint if exists automation_settings_tiktok_mode_check;
+alter table public.automation_settings add constraint automation_settings_tiktok_mode_check check (tiktok_mode in ('inbox','direct'));
+alter table public.automation_settings add column if not exists tiktok_privacy text not null default 'PUBLIC_TO_EVERYONE';
+alter table public.automation_settings add column if not exists tiktok_allow_comments boolean not null default true;
+alter table public.automation_settings add column if not exists tiktok_consent_at timestamptz;

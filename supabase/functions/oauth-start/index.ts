@@ -9,6 +9,7 @@ const META_SCOPES = [
   'pages_read_user_content', 'pages_manage_engagement', 'instagram_manage_comments',
 ].join(',')
 const YOUTUBE_SCOPES = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl'
+// video.publish (publicare directă) se cere doar când modul TikTok din Automatizări e „direct”.
 const TIKTOK_SCOPES = 'user.info.basic,video.upload'
 
 Deno.serve(async (request) => {
@@ -24,6 +25,8 @@ Deno.serve(async (request) => {
 
     const state = randomToken(24)
     const db = adminClient()
+    const { data: settings } = await db.from('automation_settings').select('tiktok_mode').eq('owner_id', ownerId).maybeSingle()
+    const tiktokScopes = settings?.tiktok_mode === 'direct' ? `${TIKTOK_SCOPES},video.publish` : TIKTOK_SCOPES
     await db.from('oauth_states').delete().lt('created_at', new Date(Date.now() - 3600_000).toISOString())
     const { error } = await db.from('oauth_states').insert({ state, owner_id: ownerId, provider, return_to: returnTo })
     if (error) throw error
@@ -44,7 +47,7 @@ Deno.serve(async (request) => {
       })}`
     } else {
       url = `https://www.tiktok.com/v2/auth/authorize/?${new URLSearchParams({
-        client_key: env('TIKTOK_CLIENT_KEY'), redirect_uri: redirect, state, scope: TIKTOK_SCOPES, response_type: 'code',
+        client_key: env('TIKTOK_CLIENT_KEY'), redirect_uri: redirect, state, scope: tiktokScopes, response_type: 'code',
       })}`
     }
     return json({ url })

@@ -172,6 +172,10 @@ Deno.serve(async (request) => {
       if (settings?.daily_enabled !== true) throw new HttpError(409, 'Automatizarea zilnică este oprită din platformă')
     }
 
+    // Publicare fără aprobare: doar dacă Ioan a pornit-o în Automatizări (clipurile intră direct ca „Programat”).
+    const { data: publishSettings } = await db.from('automation_settings').select('auto_publish').eq('owner_id', owner.id).maybeSingle()
+    const autoPublish = publishSettings?.auto_publish === true
+
     if (dryRun) {
       const slots = []
       for (const platform of platforms) slots.push({ platform, scheduled_for: (await nextFreeSlot(owner.id, platform, startFrom, slotIndex)).toISOString() })
@@ -209,7 +213,7 @@ Deno.serve(async (request) => {
       const { data: post, error } = await db.from('posts').insert({
         owner_id: owner.id, platform, title,
         body: String(captions[platform] || defaultCaption).slice(0, 2200),
-        hashtags, media_id: asset.id, status: 'pending_approval', scheduled_for: when.toISOString(),
+        hashtags, media_id: asset.id, status: autoPublish ? 'scheduled' : 'pending_approval', scheduled_for: when.toISOString(),
         metadata: { source: String(input.source || 'ingest'), ingest_id: ingestId, script: input.script ? String(input.script).slice(0, 2000) : null, hook: input.hook ? String(input.hook).slice(0, 300) : null },
       }).select('id, platform, scheduled_for').single()
       if (error) throw error

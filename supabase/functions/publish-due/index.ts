@@ -176,20 +176,49 @@ async function publishTiktok(post: Post): Promise<Result> {
   const media = await mediaUrl(post)
   if (!media) throw new Error('TikTok are nevoie de un videoclip')
   const accessToken = await tiktokToken(acc, token)
+  const auth = { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json; charset=UTF-8' }
+  const { data: settings } = await db().from('automation_settings')
+    .select('tiktok_mode, tiktok_privacy, tiktok_allow_comments, tiktok_consent_at').eq('owner_id', post.owner_id).maybeSingle()
   const bytes = await downloadVideo(media.url)
   const size = bytes.byteLength
   if (size > 64 * 1024 * 1024) throw new Error('Videoclipul depășește 64 MB pentru TikTok')
-  const init = await fetchJson('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json; charset=UTF-8' },
-    body: JSON.stringify({ source_info: { source: 'FILE_UPLOAD', video_size: size, chunk_size: size, total_chunk_count: 1 } }),
-  })
-  const upload = await fetch(init.data.upload_url, {
-    method: 'PUT',
-    headers: { 'Content-Type': media.mime, 'Content-Length': String(size), 'Content-Range': `bytes 0-${size - 1}/${size}` },
-    body: bytes,
-  })
-  if (!upload.ok) throw new Error(`Încărcarea pe TikTok a eșuat (${upload.status})`)
+  const source_info = { source: 'FILE_UPLOAD', video_size: size, chunk_size: size, total_chunk_count: 1 }
+  const upload = async (url: string) => {
+    const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': media.mime, 'Content-Length': String(size), 'Content-Range': `bytes 0-${size - 1}/${size}` }, body: bytes })
+    if (!res.ok) throw new Error(`Încărcarea pe TikTok a eșuat (${res.status})`)
+  }
+
+  // Publicare directă: doar dacă e aleasă în Automatizări și ai confirmat declarațiile TikTok.
+  if (settings?.tiktok_mode === 'direct' && settings.tiktok_consent_at) {
+    const creator = await fetchJson('https://open.tiktokapis.com/v2/post/publish/creator_info/query/', { method: 'POST', headers: auth, body: '{}' })
+    const options: string[] = creator.data?.privacy_level_options || []
+    const wanted = String(settings.tiktok_privacy || 'PUBLIC_TO_EVERYONE')
+    const privacy = options.includes(wanted) ? wanted : options.includes('SELF_ONLY') ? 'SELF_ONLY' : options[0]
+    if (!privacy) throw new Error('TikTok nu a întors nicio opțiune de vizibilitate pentru cont')
+    const maxSec = Number(creator.data?.max_video_post_duration_sec || 0)
+    if (maxSec && Number(post.metadata?.duration_seconds || 0) > maxSec) throw new Error(`Clipul e mai lung de ${maxSec} s, limita contului TikTok`)
+    const init = await fetchJson('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+      method: 'POST', headers: auth,
+      body: JSON.stringify({
+        post_info: {
+          title: caption(post, 2200), privacy_level: privacy,
+          disable_comment: !settings.tiktok_allow_comments || creator.data?.comment_disabled === true,
+          disable_duet: creator.data?.duet_disabled === true, disable_stitch: creator.data?.stitch_disabled === true,
+          video_cover_timestamp_ms: 1000,
+          // Promovează propria afacere: TikTok cere marcarea ca „Your brand”.
+          brand_organic_toggle: true, brand_content_toggle: false,
+        },
+        source_info,
+      }),
+    })
+    await upload(init.data.upload_url)
+    const note = privacy === wanted ? 'Publicat direct pe TikTok (se procesează câteva minute)'
+      : `Publicat direct, dar ca ${privacy === 'SELF_ONLY' ? '„Doar eu”' : privacy}: aplicația TikTok nu e încă aprobată pentru postări publice`
+    return { done: true, externalId: init.data.publish_id, note }
+  }
+
+  const init = await fetchJson('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', { method: 'POST', headers: auth, body: JSON.stringify({ source_info }) })
+  await upload(init.data.upload_url)
   return { done: true, externalId: init.data.publish_id, note: 'Trimis în inbox-ul TikTok: deschide aplicația și publică-l cu textul din platformă' }
 }
 
