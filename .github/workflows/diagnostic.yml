@@ -38,7 +38,7 @@ jobs:
           if [ "$TEST_AI" = "social" ] || [ "$TEST_AI" = "groups" ]; then
             q "Pornesc testul AI ($TEST_AI)" "select net.http_post(url := (select decrypted_secret from vault.decrypted_secrets where name='project_url') || '/functions/v1/generate-content', headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',(select decrypted_secret from vault.decrypted_secrets where name='publisher_cron_secret')), body := jsonb_build_object('mode','$TEST_AI','prompt','Moș Nicolae: pune în ghete un videoclip de la Moș'), timeout_milliseconds := 60000) id"
             sleep 45
-            q "Rezultat test AI" "select status_code, round(extract(epoch from (now()-created))) age_s, left(coalesce(content::text, error_msg),1500) content from net._http_response order by created desc limit 1"
+            q "Rezultat test AI" "select status_code, round(extract(epoch from (now()-created))) age_s, left(coalesce(content::text, error_msg),1500) content from net._http_response where created > now() - interval '3 minutes' and (content::text like '%"mode"%' or content::text like '%"error"%' or error_msg is not null) order by created desc limit 2"
           fi
           q "Joburi cron" "select jobname, schedule, active from cron.job"
           q "Ultimele rulări cron" "select j.jobname, d.status, d.start_time, left(coalesce(d.return_message,''),120) msg from cron.job_run_details d join cron.job j using (jobid) order by d.start_time desc limit 5"
