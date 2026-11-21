@@ -151,12 +151,12 @@ export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: b
       try {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` }, signal: timeout(),
-          body: JSON.stringify({ model, temperature, response_format: { type: 'json_object' },
+          body: JSON.stringify({ model, temperature, ...(model.startsWith('openai/') ? { reasoning_effort: 'low' } : { response_format: { type: 'json_object' } }),
             messages: [{ role: 'system', content: 'Răspunzi doar cu JSON valid, în limba română.' }, { role: 'user', content: prompt }] }),
         })
         const payload = await res.json().catch(() => ({}))
         const text = payload?.choices?.[0]?.message?.content || ''
-        if (res.ok && text) return { ...asObject(JSON.parse(String(text).replace(/^```json\s*|\s*```$/g, '').trim())), _model: `groq:${model}` }
+        if (res.ok && text) { const t = String(text); return { ...asObject(JSON.parse(t.slice(t.indexOf('{') >= 0 && (t.indexOf('[') < 0 || t.indexOf('{') < t.indexOf('[')) ? t.indexOf('{') : t.indexOf('['), Math.max(t.lastIndexOf('}'), t.lastIndexOf(']')) + 1))), _model: `groq:${model}` } }
         aiErrors.push(`groq ${model}: ${res.status} ${String(payload?.error?.message || '').slice(0, 160)}`)
       } catch (e) { aiErrors.push(`groq ${model}: ${(e as Error).message.slice(0, 160)}`) }
     }
