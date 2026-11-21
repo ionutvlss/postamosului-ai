@@ -126,6 +126,12 @@ async function syncStats() {
   for (const acc of (accounts || []) as Account[]) {
     let accessToken: string
     try { accessToken = await token(acc) } catch { out.errors++; continue }
+    if (acc.platform !== 'youtube') {
+      try {
+        const dbg = await fetchJson(`${GRAPH}/debug_token?${new URLSearchParams({ input_token: accessToken, access_token: `${env('META_APP_ID')}|${env('META_APP_SECRET')}` })}`)
+        await db().from('social_accounts').update({ metadata: { ...(acc.metadata || {}), granted_scopes: dbg.data?.scopes || [], token_type: dbg.data?.type || null } }).eq('id', acc.id)
+      } catch (e) { console.error('debug_token', (e as Error).message) }
+    }
     const { data: rows } = await db().from('posts').select('id, external_post_id, metadata').eq('owner_id', acc.owner_id).eq('platform', acc.platform)
       .eq('status', 'published').not('external_post_id', 'is', null).gte('published_at', new Date(Date.now() - 60 * 86400000).toISOString()).limit(80)
     const due = (rows || []).filter(r => !r.metadata?.stats?.at || r.metadata.stats.at < stale || r.metadata.stats.note).slice(0, 25)
@@ -148,14 +154,14 @@ async function syncStats() {
             try {
               const ins = await fetchJson(`${GRAPH}/${id}/insights?${new URLSearchParams({ metric: 'views', access_token: accessToken })}`)
               stat.views = Number(ins.data?.find((x: any) => x.name === 'views')?.values?.[0]?.value ?? 0)
-            } catch { stat.note = 'Vizualizările Instagram cer permisiunea „instagram_manage_insights”: reconectează Meta' }
+            } catch (e) { stat.note = `Vizualizările Instagram cer permisiunea „instagram_manage_insights”: reconectează Meta [${(e as Error).message.slice(0, 140)}]` }
           } else {
             const m = await fetchJson(`${GRAPH}/${id}?${new URLSearchParams({ fields: 'likes.summary(true).limit(0),comments.summary(true).limit(0)', access_token: accessToken })}`)
             stat.likes = Number(m.likes?.summary?.total_count || 0); stat.comments = Number(m.comments?.summary?.total_count || 0)
             try {
               const ins = await fetchJson(`${GRAPH}/${id}/video_insights?${new URLSearchParams({ metric: 'blue_reels_play_count', access_token: accessToken })}`)
               stat.views = Number(ins.data?.[0]?.values?.[0]?.value ?? 0)
-            } catch { stat.note = 'Vizualizările Facebook cer permisiunea „read_insights”: reconectează Meta' }
+            } catch (e) { stat.note = `Vizualizările Facebook cer permisiunea „read_insights”: reconectează Meta [${(e as Error).message.slice(0, 140)}]` }
           }
         } catch (e) { stat.note = (e as Error).message.slice(0, 160) }
         results.set(id, stat)
