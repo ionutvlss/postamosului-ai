@@ -121,7 +121,7 @@ const asObject = (v: unknown) => Array.isArray(v) ? { items: v } : (v && typeof 
 export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: boolean } = {}): Promise<Record<string, unknown> | null> {
   aiErrors.length = 0
   const geminiKey = Deno.env.get('GEMINI_API_KEY')
-  const timeout = () => opts.fast ? AbortSignal.timeout(22000) : AbortSignal.timeout(60000)
+  const timeout = () => opts.fast ? AbortSignal.timeout(40000) : AbortSignal.timeout(60000)
   if (geminiKey) {
     const models = [Deno.env.get('GEMINI_MODEL'), 'gemini-3.5-flash', 'gemini-3.8-flash'].filter(Boolean) as string[]
     for (const model of [...new Set(models)]) {
@@ -134,7 +134,7 @@ export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: b
       try {
         let res = await call(true)
         if (res.status === 400 && thinking) res = await call('low') // modelul nu acceptă „minimal”: încearcă „low”
-        if (res.status === 503 || res.status === 429) { await new Promise(r => setTimeout(r, 1500)); res = await call(true) } // supraîncărcare de moment
+        if (res.status === 503) { await new Promise(r => setTimeout(r, 1500)); res = await call(true) } // supraîncărcare de moment
         const payload = await res.json().catch(() => ({}))
         const text = payload?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || ''
         if (res.ok && text) return { ...asObject(JSON.parse(text.replace(/^```json\s*|\s*```$/g, '').trim())), _model: model }
