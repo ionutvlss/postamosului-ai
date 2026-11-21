@@ -121,11 +121,11 @@ const asObject = (v: unknown) => Array.isArray(v) ? { items: v } : (v && typeof 
 export async function aiJson(prompt: string, temperature = 0.7, opts: { fast?: boolean } = {}): Promise<Record<string, unknown> | null> {
   aiErrors.length = 0
   const geminiKey = Deno.env.get('GEMINI_API_KEY')
-  const timeout = () => opts.fast ? AbortSignal.timeout(25000) : AbortSignal.timeout(60000)
+  const timeout = () => opts.fast ? AbortSignal.timeout(45000) : AbortSignal.timeout(60000)
   if (geminiKey) {
-    const models = [Deno.env.get('GEMINI_MODEL'), 'gemini-3.5-flash', 'gemini-2.5-flash'].filter(Boolean) as string[]
+    const models = [Deno.env.get('GEMINI_MODEL'), 'gemini-3.8-flash', 'gemini-3.5-flash'].filter(Boolean) as string[]
     for (const model of [...new Set(models)]) {
-      const thinking = !opts.fast ? undefined : model.startsWith('gemini-2.5') ? { thinkingBudget: 0 } : { thinkingLevel: 'low' }
+      const thinking = !opts.fast ? undefined : model.startsWith('gemini-2.5') ? { thinkingBudget: 0 } : { thinkingLevel: 'minimal' }
       const call = (withThinking: boolean) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, signal: timeout(),
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }],
