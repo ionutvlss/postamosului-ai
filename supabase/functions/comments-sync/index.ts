@@ -134,6 +134,22 @@ async function syncStats() {
     }
     const { data: rows } = await db().from('posts').select('id, external_post_id, metadata').eq('owner_id', acc.owner_id).eq('platform', acc.platform)
       .eq('status', 'published').not('external_post_id', 'is', null).gte('published_at', new Date(Date.now() - 60 * 86400000).toISOString()).limit(80)
+    // Unele postări Instagram vechi au salvat ID-ul containerului, nu al clipului: le reparăm după link (permalink).
+    if (acc.platform === 'instagram' && (rows || []).some(r => String(r.metadata?.stats?.note || '').includes('does not exist'))) {
+      try {
+        const list = await fetchJson(`${GRAPH}/${acc.external_account_id}/media?${new URLSearchParams({ fields: 'id,permalink', limit: '50', access_token: accessToken })}`)
+        const byLink = new Map((list.data || []).map((m: any) => [String(m.permalink || '').replace(/\/$/, ''), m.id]))
+        for (const r of rows || []) {
+          if (!String(r.metadata?.stats?.note || '').includes('does not exist')) continue
+          const { data: full } = await db().from('posts').select('external_url').eq('id', r.id).maybeSingle()
+          const realId = byLink.get(String(full?.external_url || '').replace(/\/$/, ''))
+          if (realId && realId !== r.external_post_id) {
+            await db().from('posts').update({ external_post_id: realId }).eq('id', r.id)
+            r.external_post_id = realId
+          }
+        }
+      } catch (e) { console.error('ig repair', (e as Error).message) }
+    }
     const due = (rows || []).filter(r => !r.metadata?.stats?.at || r.metadata.stats.at < stale || r.metadata.stats.note).slice(0, 25)
     if (!due.length) continue
     const results = new Map<string, Record<string, unknown>>()
