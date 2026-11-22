@@ -115,7 +115,8 @@
       "title": "Video de la Moș Crăciun cu numele finului",
       "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nPentru nași, bunici și mătuși care vor să dăruiască ceva cu adevărat personal.\n\nBifați „Este un cadou” la comandă, iar videoclipul ajunge la părinți în dimineața de Crăciun, cu numele vostru pe el.\n\nComandă în 3 minute 👇",
       "kicker": "Cadou de la nași",
-      "end_title": "Un cadou|*care rămâne.*"
+      "end_title": "Un cadou|*care rămâne.*",
+      "used": "2026-11-22"
     },
     {
       "id": "bunici-departe",
@@ -237,7 +238,8 @@
       "title": "Video de la Moș Crăciun gata într-o oră",
       "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nTrei minute ca să completați detaliile, mai puțin de o oră până ajunge pe email.\n\nFără cont. Plată cu cardul, Apple Pay sau Google Pay.\n\nComandă în 3 minute 👇",
       "kicker": "Gata într-o oră",
-      "end_title": "Gata|*în sub o oră.*"
+      "end_title": "Gata|*în sub o oră.*",
+      "used": "2026-11-22"
     },
     {
       "id": "doi-copii",
@@ -546,6 +548,28 @@
       "script": "stiu-ce-a-reusit",
       "style": "editorial",
       "note": "test complet 4 platforme + 4 grupuri"
+    },
+    {
+      "date": "2026-11-22",
+      "kind": "clip",
+      "script": "sub-o-ora",
+      "style": "editorial",
+      "note": "rulare zilnică, 12:30"
+    },
+    {
+      "date": "2026-11-22",
+      "kind": "clip",
+      "script": "nasi-cadou",
+      "style": "serif",
+      "note": "rulare zilnică, 19:30"
+    },
+    {
+      "date": "2026-11-22",
+      "kind": "poster",
+      "template": "editorial",
+      "scene": "scene/fereastra-scrisoare.png",
+      "title": "Moș Crăciun îi trimite|*un video doar al lui*",
+      "note": "5 grupuri"
     }
   ]
 }
