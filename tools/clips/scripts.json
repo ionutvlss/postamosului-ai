@@ -130,7 +130,7 @@
         "Bunici dragi, sunteți departe de nepoți?",
         "Comandați un videoclip de la mine,",
         "cu numele lor.",
-        "e spun cât îi iubiți, iar ei îl primesc pe email în mai puțin de o oră.",
+        "Le spun cât îi iubiți, iar ei îl primesc pe email în mai puțin de o oră.",
         "Poșta Moșului!"
       ],
       "highlight": [
@@ -213,7 +213,8 @@
       "title": "Moșul îi răspunde la scrisoare, în video",
       "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nCea mai frumoasă parte a unei scrisori este răspunsul.\n\nFolosiți chiar ce a scris copilul, iar Moș Crăciun îi răspunde într-un videoclip doar al lui.\n\nComandă în 3 minute 👇",
       "kicker": "Răspunsul Moșului",
-      "end_title": "Fiecare scrisoare|*merită un răspuns.*"
+      "end_title": "Fiecare scrisoare|*merită un răspuns.*",
+      "used": "2026-11-23"
     },
     {
       "id": "sub-o-ora",
@@ -312,7 +313,8 @@
       "title": "Video de la Moș Crăciun, mai ieftin ca o jucărie",
       "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nJucăriile se strică. Amintirile rămân.\n\nUn videoclip în care Moș Crăciun îi vorbește copilului vostru pe nume, de păstrat ani la rând.\n\nComandă în 3 minute 👇",
       "kicker": "De la 39 lei",
-      "end_title": "Un cadou|*care nu se uită.*"
+      "end_title": "Un cadou|*care nu se uită.*",
+      "used": "2026-11-23"
     },
     {
       "id": "ajun-ultim-moment",
@@ -570,6 +572,20 @@
       "scene": "scene/fereastra-scrisoare.png",
       "title": "Moș Crăciun îi trimite|*un video doar al lui*",
       "note": "5 grupuri"
+    },
+    {
+      "date": "2026-11-23",
+      "kind": "clip",
+      "script": "pret-mic",
+      "style": "editorial",
+      "note": "rulare zilnică, 12:30 (TikTok 24.11 12:30, slot ocupat); clipul zilei pentru grupuri"
+    },
+    {
+      "date": "2026-11-23",
+      "kind": "clip",
+      "script": "scrisoarea-a-ajuns",
+      "style": "serif",
+      "note": "rulare zilnică, 19:30"
     }
   ]
 }
