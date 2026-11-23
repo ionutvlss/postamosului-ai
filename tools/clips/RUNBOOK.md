@@ -1,5 +1,8 @@
 # Rețeta zilnică: 2 reclame cu Moșul → coada de aprobare
 
+> **Din 24.11.2026 rularea zilnică o face GitHub Actions** (`.github/workflows/daily-clips.yml` → `tools/clips/daily_run.py`), fără Claude:
+> scripturile din bancă, Gemini când nu mai ajung + textele de grupuri, WaveSpeed pentru voce și avatar. Rețeta de mai jos rămâne valabilă pentru rulările manuale cu Claude.
+
 Rulează o dată pe zi (dimineața). Rezultat: 2 clipuri de 10–15 s, fiecare pe TikTok, Facebook Reels,
 Instagram Reels și YouTube Shorts, în „De aprobat”, la sloturile 1 și 2 ale zilei următoare libere.
 
