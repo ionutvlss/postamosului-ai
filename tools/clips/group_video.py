@@ -56,29 +56,46 @@ def build_segments(order):
 
 
 def estimate(segs):
+    """(secunde, cost voce, cost videoclip) în dolari, estimări prudente."""
     secs = sum(len(s.split()) / WORDS_PER_SEC for s in segs)
-    return secs, secs * AVATAR_USD_PER_SEC + len(segs) * TTS_USD_PER_SEGMENT
+    return secs, len(segs) * TTS_USD_PER_SEGMENT, secs * AVATAR_USD_PER_SEC
 
 
-def run(order, segs, work):
+def run_voice(segs, work):
+    """Faza 1 (ieftină): doar vocea. Returnează (mp3 pe segmente, URL-uri audio, voice.mp3 întreg)."""
     os.makedirs(work, exist_ok=True)
-    clips, mp3s = [], []
+    mp3s, urls = [], []
     for i, text in enumerate(segs):
+        mp3 = os.path.join(work, f"seg{i:02d}.mp3")
+        urlfile = os.path.join(work, f"seg{i:02d}.audio_url")
+        if os.path.exists(mp3) and os.path.exists(urlfile):
+            url = open(urlfile).read().strip()
+        else:
+            url = ws_run("elevenlabs/eleven-v3", {"text": text, "voice_id": "Bill", "stability": 0.5}, wait=300)
+            download(url, mp3)
+            open(urlfile, "w").write(url)
+        print(f"segment {i + 1}/{len(segs)}: voce gata", flush=True)
+        mp3s.append(mp3)
+        urls.append(url)
+    alst = os.path.join(work, "audio_list.txt")
+    with open(alst, "w") as f:
+        f.writelines(f"file '{os.path.abspath(m)}'\n" for m in mp3s)
+    voice = os.path.join(work, "voice.mp3")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", alst, "-c:a", "libmp3lame", "-q:a", "4", voice], check=True)
+    return mp3s, urls, voice
+
+
+def run_video(segs, audio_urls, work):
+    """Faza 2 (scumpă): avatarul pe vocea aprobată, apoi montajul 16:9. Returnează final.mp4."""
+    os.makedirs(work, exist_ok=True)
+    clips = []
+    for i, (text, audio_url) in enumerate(zip(segs, audio_urls)):
         h = hashlib.sha1(text.encode()).hexdigest()[:10]
         clip = os.path.join(work, f"seg{i:02d}_{h}.mp4")
         if not os.path.exists(clip):
-            urlfile = os.path.join(work, f"seg{i:02d}_{h}.audio_url")
-            if os.path.exists(urlfile):
-                audio_url = open(urlfile).read().strip()
-            else:
-                audio_url = ws_run("elevenlabs/eleven-v3", {"text": text, "voice_id": "Bill", "stability": 0.5}, wait=300)
-                open(urlfile, "w").write(audio_url)  # nu plătim vocea a doua oară dacă avatarul eșuează
-            download(audio_url, os.path.join(work, f"seg{i:02d}_{h}.mp3"))
-            print(f"segment {i + 1}/{len(segs)}: voce gata, generez avatarul", flush=True)
-            url = ws_run("heygen/avatar-6/turbo", {"image": AVATAR, "audio": audio_url, "resolution": "1080p", "prompt": AVATAR_PROMPT}, wait=1200)
-            download(url, clip)
+            print(f"segment {i + 1}/{len(segs)}: generez avatarul", flush=True)
+            download(ws_run("heygen/avatar-6/turbo", {"image": AVATAR, "audio": audio_url, "resolution": "1080p", "prompt": AVATAR_PROMPT}, wait=1200), clip)
         clips.append(clip)
-        mp3s.append(os.path.join(work, os.path.basename(clip)[:-4] + ".mp3"))
     lst = os.path.join(work, "list.txt")
     with open(lst, "w") as f:
         f.writelines(f"file '{os.path.abspath(c)}'\n" for c in clips)
@@ -90,12 +107,13 @@ def run(order, segs, work):
           "[b]scale=-2:720[fg];[bg][fg]overlay=(W-w)/2:0,format=yuv420p[v]")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", joined, "-filter_complex", vf, "-map", "[v]", "-map", "0:a",
                     "-c:v", "libx264", "-crf", "20", "-preset", "veryfast", "-c:a", "aac", "-movflags", "+faststart", final], check=True)
-    voice = os.path.join(work, "voice.mp3")  # doar vocea, pentru ascultare rapidă înainte de aprobare
-    alst = os.path.join(work, "audio_list.txt")
-    with open(alst, "w") as f:
-        f.writelines(f"file '{os.path.abspath(m)}'\n" for m in mp3s if os.path.exists(m))
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", alst, "-c:a", "libmp3lame", "-q:a", "4", voice], check=True)
-    return final, voice
+    return final
+
+
+def run(order, segs, work):
+    """Pentru rulări manuale: voce + videoclip, fără pas de aprobare."""
+    _, urls, voice = run_voice(segs, work)
+    return run_video(segs, urls, work), voice
 
 
 def main():
@@ -107,11 +125,11 @@ def main():
     a = ap.parse_args()
     order = json.load(open(a.order_json, encoding="utf-8"))
     segs = build_segments(order)
-    secs, usd = estimate(segs)
+    secs, v_usd, a_usd = estimate(segs)
     print(f"Grup: {order['group_name']} · {len(order['children'])} copii · pachet {order['package']}")
     for i, s in enumerate(segs, 1):
         print(f"\n[{i}] ({len(s.split())} cuvinte)\n{s}")
-    print(f"\nDurată estimată: ~{secs:.0f} s · cost estimat: ~{usd:.2f} $.")
+    print(f"\nDurată estimată: ~{secs:.0f} s · cost estimat: voce ~{v_usd:.2f} $ + videoclip ~{a_usd:.2f} $ = ~{v_usd + a_usd:.2f} $.")
     if not a.run:
         print("Dry-run: nu s-a generat nimic. Adaugă --run --yes ca să generezi.")
         return

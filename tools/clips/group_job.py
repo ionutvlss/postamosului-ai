@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generare automată pentru comenzile de grup PLĂTITE (rulează din GitHub Actions, la 5 minute).
 
-Ia o comandă plătită de pe site, generează vocea și videoclipul, le încarcă în spațiul privat și o trece pe
-„De verificat”. Ioan ascultă în /admin-grupuri și apasă „Aprobă și trimite clientului”: nimic nu pleacă la client automat.
+Două faze, hotărâte de site: (1) voce → „De verificat”, Ioan ascultă în /admin-grupuri; după „Aprobă vocea”
+(2) videoclip pe vocea aprobată (fără să plătească vocea din nou) → livrat automat clientului.
 
 Secrete (doar din mediu, nu se afișează): SITE_URL, AUTOMATION_SHARED_SECRET, WAVESPEED_API_KEY.
 """
@@ -10,7 +10,7 @@ import json, os, sys, tempfile, traceback, urllib.error, urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from daily_run import ws_balance  # noqa: E402
-from group_video import build_segments, estimate, run  # noqa: E402
+from group_video import build_segments, estimate, run_video, run_voice  # noqa: E402
 
 UA = "postamosului-group-job/1.0"
 
@@ -45,21 +45,32 @@ def main():
     if not order:
         print("Nicio comandă de grup de generat.")
         return
-    oid = order["id"]
-    print(f"Comandă {oid}: {order['group_name']} ({len(order['children'])} copii)")
+    oid, phase = order["id"], order.get("phase", "voice")
+    print(f"Comandă {oid}: {order['group_name']} ({len(order['children'])} copii), faza: {phase}")
     try:
         segs = build_segments(order)
-        secs, usd = estimate(segs)
+        _, voice_usd, video_usd = estimate(segs)
+        need = (voice_usd if phase == "voice" else video_usd) * 1.3
         balance = ws_balance()
-        if balance is None or balance < usd * 1.3:
-            raise RuntimeError(f"Sold WaveSpeed insuficient ({balance} $; necesar ~{usd * 1.3:.1f} $). Încarcă credit și apasă Regenerează.")
+        if balance is None or balance < need:
+            raise RuntimeError(f"Sold WaveSpeed insuficient ({balance} $; necesar ~{need:.1f} $). Încarcă credit și apasă Reîncearcă.")
         work = tempfile.mkdtemp(prefix="grup_")
-        final, voice = run(order, segs, work)
-        urls = site({"action": "upload_urls", "id": oid})
-        put_file(urls["voice_upload_url"], voice, "audio/mpeg")
-        put_file(urls["video_upload_url"], final, "video/mp4")
-        site({"action": "complete", "id": oid})
-        print("Gata: de verificat în /admin-grupuri.")
+        names = [f"seg{i:02d}" for i in range(len(segs))]
+        if phase == "voice":
+            mp3s, _, voice = run_voice(segs, work)
+            urls = site({"action": "upload_urls", "id": oid, "names": names + ["voice"]})["urls"]
+            for name, path in zip(names, mp3s):  # segmentele întâi, vocea întreagă la urmă (semnalul că faza e completă)
+                put_file(urls[name], path, "audio/mpeg")
+            put_file(urls["voice"], voice, "audio/mpeg")
+            site({"action": "complete", "id": oid, "phase": "voice"})
+            print("Voce gata: de ascultat în /admin-grupuri.")
+        else:
+            audio_urls = site({"action": "download_urls", "id": oid, "names": names})["urls"]
+            final = run_video(segs, [audio_urls[n] for n in names], work)
+            urls = site({"action": "upload_urls", "id": oid, "names": ["video"]})["urls"]
+            put_file(urls["video"], final, "video/mp4")
+            site({"action": "complete", "id": oid, "phase": "video"})
+            print("Videoclip gata și trimis clientului.")
     except BaseException as e:  # noqa: BLE001
         traceback.print_exc()
         msg = str(e)[:300] or e.__class__.__name__
