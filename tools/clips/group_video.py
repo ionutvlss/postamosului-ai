@@ -62,7 +62,7 @@ def estimate(segs):
 
 def run(order, segs, work):
     os.makedirs(work, exist_ok=True)
-    clips = []
+    clips, mp3s = [], []
     for i, text in enumerate(segs):
         h = hashlib.sha1(text.encode()).hexdigest()[:10]
         clip = os.path.join(work, f"seg{i:02d}_{h}.mp4")
@@ -73,10 +73,12 @@ def run(order, segs, work):
             else:
                 audio_url = ws_run("elevenlabs/eleven-v3", {"text": text, "voice_id": "Bill", "stability": 0.5}, wait=300)
                 open(urlfile, "w").write(audio_url)  # nu plătim vocea a doua oară dacă avatarul eșuează
+            download(audio_url, os.path.join(work, f"seg{i:02d}_{h}.mp3"))
             print(f"segment {i + 1}/{len(segs)}: voce gata, generez avatarul", flush=True)
             url = ws_run("heygen/avatar-6/turbo", {"image": AVATAR, "audio": audio_url, "resolution": "1080p", "prompt": AVATAR_PROMPT}, wait=1200)
             download(url, clip)
         clips.append(clip)
+        mp3s.append(os.path.join(work, os.path.basename(clip)[:-4] + ".mp3"))
     lst = os.path.join(work, "list.txt")
     with open(lst, "w") as f:
         f.writelines(f"file '{os.path.abspath(c)}'\n" for c in clips)
@@ -88,7 +90,12 @@ def run(order, segs, work):
           "[b]scale=-2:720[fg];[bg][fg]overlay=(W-w)/2:0,format=yuv420p[v]")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", joined, "-filter_complex", vf, "-map", "[v]", "-map", "0:a",
                     "-c:v", "libx264", "-crf", "20", "-preset", "veryfast", "-c:a", "aac", "-movflags", "+faststart", final], check=True)
-    return final
+    voice = os.path.join(work, "voice.mp3")  # doar vocea, pentru ascultare rapidă înainte de aprobare
+    alst = os.path.join(work, "audio_list.txt")
+    with open(alst, "w") as f:
+        f.writelines(f"file '{os.path.abspath(m)}'\n" for m in mp3s if os.path.exists(m))
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", alst, "-c:a", "libmp3lame", "-q:a", "4", voice], check=True)
+    return final, voice
 
 
 def main():
@@ -112,7 +119,8 @@ def main():
         sys.exit("Costă bani: confirmă cu --yes.")
     if not os.environ.get("WAVESPEED_API_KEY"):
         sys.exit("Lipsește WAVESPEED_API_KEY în mediu.")
-    print("Gata:", run(order, segs, os.path.join(a.out, order["id"])))
+    final, voice = run(order, segs, os.path.join(a.out, order["id"]))
+    print("Gata:", final, voice)
 
 
 if __name__ == "__main__":

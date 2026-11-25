@@ -1,0 +1,30 @@
+name: Videoclipuri de grup
+
+# Verifică la 5 minute dacă există comenzi de grup plătite și le generează.
+# Rezultatul merge pe „De verificat” în /admin-grupuri; Ioan ascultă și aprobă manual.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: group-videos
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generează comenzile de grup plătite
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          AUTOMATION_SHARED_SECRET: ${{ secrets.AUTOMATION_SHARED_SECRET }}
+          WAVESPEED_API_KEY: ${{ secrets.WAVESPEED_API_KEY }}
+        run: |
+          which ffmpeg > /dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null)
+          python3 tools/clips/group_job.py
