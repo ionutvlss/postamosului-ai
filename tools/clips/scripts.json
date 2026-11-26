@@ -141,7 +141,8 @@
       "title": "Bunicii trimit un video de la Moș",
       "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nPentru bunicii care nu pot fi lângă nepoți de sărbători.\n\nMoș Crăciun le vorbește pe nume, iar videoclipul ajunge la părinți exact în ziua pe care o alegeți voi.\n\nComandă în 3 minute 👇",
       "kicker": "Pentru bunici",
-      "end_title": "Oriunde ar fi,|*ajunge la timp.*"
+      "end_title": "Oriunde ar fi,|*ajunge la timp.*",
+      "used": "2026-11-26"
     },
     {
       "id": "mos-nicolae-ghete",
@@ -165,7 +166,8 @@
       "title": "Pune în ghete un video de la Moș",
       "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nÎn noaptea de 5 spre 6 decembrie, lăsați lângă dulciuri un bilețel: „Moș Crăciun are ceva să-ți spună.”\n\nDimineața, puneți-i videoclipul. Restul e magie.\n\nComandă în 3 minute 👇",
       "kicker": "Pentru 6 decembrie",
-      "end_title": "Magia începe|*de la ghete.*"
+      "end_title": "Magia începe|*de la ghete.*",
+      "used": "2026-11-26"
     },
     {
       "id": "mos-nicolae-maine",
@@ -586,6 +588,20 @@
       "script": "scrisoarea-a-ajuns",
       "style": "serif",
       "note": "rulare zilnică, 19:30"
+    },
+    {
+      "date": "2026-11-26",
+      "kind": "clip",
+      "script": "mos-nicolae-ghete",
+      "style": "editorial",
+      "note": "rulare GitHub, slot 12:30"
+    },
+    {
+      "date": "2026-11-26",
+      "kind": "clip",
+      "script": "bunici-departe",
+      "style": "serif",
+      "note": "rulare GitHub, slot 19:30"
     }
   ]
 }
