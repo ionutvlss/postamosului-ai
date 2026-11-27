@@ -390,7 +390,8 @@
       "title": "Video de la Moș Crăciun. Fără poze, fără cont.",
       "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nNu cerem fotografii și nu trebuie să vă faceți cont.\n\nDetaliile despre copil se șterg la 30 de zile după livrare.\n\nComandă în 3 minute 👇",
       "kicker": "Simplu și sigur",
-      "end_title": "Simplu|*și discret.*"
+      "end_title": "Simplu|*și discret.*",
+      "used": "2026-11-27"
     },
     {
       "id": "curaj-gradinita",
@@ -415,7 +416,8 @@
       "title": "Moșul îi dă un sfat, pe nume, în video",
       "caption": "🎅 Videoclip personalizat de la Moș Crăciun, cu numele copilului tău.\nDe la 39 lei · gata în sub o oră · fără cont\n\nPuteți adăuga un îndemn blând: să doarmă singur, să-și strângă jucăriile, să fie cuminte cu frățiorul.\n\nDe la Moș Crăciun, se ascultă altfel.\n\nComandă în 3 minute 👇",
       "kicker": "Un sfat de la Moș",
-      "end_title": "Un sfat|*de la Moș.*"
+      "end_title": "Un sfat|*de la Moș.*",
+      "used": "2026-11-27"
     },
     {
       "id": "polul-nord-ocupat",
@@ -601,6 +603,20 @@
       "kind": "clip",
       "script": "bunici-departe",
       "style": "serif",
+      "note": "rulare GitHub, slot 19:30"
+    },
+    {
+      "date": "2026-11-27",
+      "kind": "clip",
+      "script": "curaj-gradinita",
+      "style": "serif",
+      "note": "rulare GitHub, slot 12:30"
+    },
+    {
+      "date": "2026-11-27",
+      "kind": "clip",
+      "script": "fara-poze",
+      "style": "editorial",
       "note": "rulare GitHub, slot 19:30"
     }
   ]
